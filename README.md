@@ -27,4 +27,7 @@ All addons are developed following the official Home Assistant Add-on standards 
 ---
 Built with ⚡ by Asgard.
 
+### Support my caffeine addiction ☕
+If these addons saved you some time (or a headache), feel free to fuel my next coding session! My code is powered by high-quality caffeine—one cup equals approximately three features and only one new bug. 😉
+
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/minermartijn)
