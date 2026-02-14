@@ -1,0 +1,15 @@
+# MCP Server - use latest with all features including SSE transport
+mcp[cli]>=1.0.0
+
+# HTTP Server
+uvicorn>=0.30.0
+starlette>=0.37.0
+sse-starlette>=2.0.0
+
+# Home Assistant Client Libraries
+aiohttp>=3.9.0
+websockets>=12.0
+
+# Utilities
+python-dateutil>=2.8.0
+pydantic>=2.0.0
