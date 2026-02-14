@@ -4,7 +4,7 @@ This repository contains a collection of custom Home Assistant addons maintained
 
 ## Available Addons
 
-### [Home Assistant KIRO MCP Server](./ha_addons)
+### [HA Addon MCP Server](./ha_addons)
 A Model Context Protocol (MCP) server for Home Assistant that allows AI assistants like Claude or Kiro to manage your addons, check logs, and control your system through natural language.
 
 ## How to use this repository
