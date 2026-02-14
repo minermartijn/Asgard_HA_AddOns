@@ -27,4 +27,4 @@ All addons are developed following the official Home Assistant Add-on standards 
 ---
 Built with ⚡ by Asgard.
 
-<a href="https://www.buymeacoffee.com/minermartijn"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=minermartijn&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" /></a>
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/minermartijn)
