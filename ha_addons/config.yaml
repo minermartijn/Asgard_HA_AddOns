@@ -1,6 +1,6 @@
-name: Home Assistant KIRO MCP Server ADDON
-version: "1.1.0"
-slug: ha_mcp_server_addon_kiro
+name: HA Addon MCP Server
+version: "1.2.0"
+slug: ha_addon_mcp_server
 description: Model Context Protocol server for Home Assistant with full API access
 arch:
   - aarch64

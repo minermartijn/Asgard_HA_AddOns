@@ -25,7 +25,7 @@ It's like having a really smart assistant who knows their way around your Home A
 ## Installation
 
 1. Add this repository to your Home Assistant addon store
-2. Find "Home Assistant MCP Server" and click Install
+2. Find "HA Addon MCP Server" and click Install
 3. Go to the Configuration tab and set your API key (or let it generate one)
 4. Start the addon
 5. Check the logs for your API key if you didn't set one
@@ -110,7 +110,7 @@ If you're exposing this through Cloudflare or another proxy, the addon handles a
 
 ## Version
 
-Current version: **1.1.0**
+Current version: **1.2.0**
 
 This is production-ready and stable. All 18 tools have been tested and work reliably.
 

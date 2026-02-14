@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
-# Home Assistant MCP Server Add-on
+# HA Addon MCP Server
 # Runs the MCP server with proper configuration
 # ==============================================================================
 
@@ -15,7 +15,7 @@ export API_KEY=$(bashio::config 'api_key')
 # Get Supervisor token (automatically provided by Home Assistant)
 export SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN}"
 
-bashio::log.info "Starting Home Assistant MCP Server..."
+bashio::log.info "Starting HA Addon MCP Server..."
 bashio::log.info "Log Level: ${LOG_LEVEL}"
 bashio::log.info "Listening on: ${HOST}:${PORT}"
 bashio::log.info "API Key configured: $([ -n "${API_KEY}" ] && echo 'Yes' || echo 'No (will generate)')"
