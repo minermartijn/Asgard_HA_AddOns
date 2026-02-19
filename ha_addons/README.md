@@ -159,3 +159,11 @@ This project follows standard open source practices. Check the repository for sp
 ---
 
 Built for people who'd rather chat with their AI assistant than click through menus. Works great with Kiro, Claude Desktop, and any other MCP-compatible tool.
+
+---
+Built with ⚡ by Asgard.
+
+### Support my caffeine addiction ☕
+If these addons saved you some time (or a headache), feel free to fuel my next coding session! My code is powered by high-quality caffeine—one cup equals approximately three features and only one new bug. 😉
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/minermartijn)

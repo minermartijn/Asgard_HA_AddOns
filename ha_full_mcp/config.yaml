@@ -1,0 +1,189 @@
+name: HA Full MCP Server
+version: "1.8.0"
+slug: ha_full_mcp_server
+description: Model Context Protocol server for Home Assistant with full API access including backup, integration, entity management, and comprehensive diagnostics
+url: https://github.com/yourusername/ha-full-mcp-server
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: application
+boot: auto
+init: false
+host_network: true
+ports:
+  8010/tcp: 8010
+ports_description:
+  8010/tcp: "MCP Server Port"
+options:
+  log_level: info
+  host: "0.0.0.0"
+  port: 8010
+  transport: sse
+  ha_token: ""
+  api_key: ""
+  addon_information:
+    list_addons: true
+    get_addon_info: true
+    get_addon_logs: true
+  addon_control:
+    start_addon: true
+    stop_addon: true
+    restart_addon: true
+  addon_management:
+    update_addon: true
+    install_addon: true
+    uninstall_addon: true
+  addon_configuration:
+    get_addon_configuration: true
+    set_addon_configuration: true
+    validate_addon_configuration: true
+  addon_advanced:
+    rebuild_addon: true
+    list_store_addons: true
+    reload_addons: true
+    check_addon_availability: true
+  system_tools:
+    get_supervisor_logs: true
+    get_homeassistant_logs: true
+    restart_homeassistant: true
+    read_config_file: true
+    write_config_file: true
+    check_config: true
+  backup_tools:
+    create_backup: true
+    list_backups: true
+    get_backup_info: true
+    restore_backup: true
+    delete_backup: true
+  integration_tools:
+    list_integrations: true
+    reload_integration: true
+    get_integration_info: true
+    remove_integration: true
+  entity_tools:
+    list_entities: true
+    get_entity_state: true
+    set_entity_state: true
+    call_service: true
+    get_services: true
+    get_entity_history: true
+  dashboard_tools:
+    list_dashboards: true
+    get_dashboard_config: true
+    create_dashboard: true
+    delete_dashboard: true
+  automation_tools:
+    list_automations: true
+    get_automation: true
+    create_automation: true
+    update_automation: true
+    delete_automation: true
+    enable_automation: true
+    disable_automation: true
+    trigger_automation: true
+  diagnostic_tools:
+    get_system_health: true
+    get_error_log_summary: true
+    list_unavailable_entities: true
+    get_recorder_stats: true
+    check_network_connectivity: true
+    list_custom_components: true
+    get_startup_time_breakdown: true
+    validate_all_automations: true
+    list_deprecated_features: true
+    get_integration_diagnostics: true
+schema:
+  log_level: list(debug|info|warning|error)?
+  host: str?
+  port: port?
+  transport: list(sse|stdio)?
+  ha_token: password
+  api_key: password
+  addon_information:
+    list_addons: bool?
+    get_addon_info: bool?
+    get_addon_logs: bool?
+  addon_control:
+    start_addon: bool?
+    stop_addon: bool?
+    restart_addon: bool?
+  addon_management:
+    update_addon: bool?
+    install_addon: bool?
+    uninstall_addon: bool?
+  addon_configuration:
+    get_addon_configuration: bool?
+    set_addon_configuration: bool?
+    validate_addon_configuration: bool?
+  addon_advanced:
+    rebuild_addon: bool?
+    list_store_addons: bool?
+    reload_addons: bool?
+    check_addon_availability: bool?
+  system_tools:
+    get_supervisor_logs: bool?
+    get_homeassistant_logs: bool?
+    restart_homeassistant: bool?
+    read_config_file: bool?
+    write_config_file: bool?
+    check_config: bool?
+  backup_tools:
+    create_backup: bool?
+    list_backons: bool?
+    get_backup_info: bool?
+    restore_backup: bool?
+    delete_backup: bool?
+  integration_tools:
+    list_integrations: bool?
+    reload_integration: bool?
+    get_integration_info: bool?
+    remove_integration: bool?
+  entity_tools:
+    list_entities: bool?
+    get_entity_state: bool?
+    set_entity_state: bool?
+    call_service: bool?
+    get_services: bool?
+    get_entity_history: bool?
+  dashboard_tools:
+    list_dashboards: bool?
+    get_dashboard_config: bool?
+    create_dashboard: bool?
+    delete_dashboard: bool?
+  automation_tools:
+    list_automations: bool?
+    get_automation: bool?
+    create_automation: bool?
+    update_automation: bool?
+    delete_automation: bool?
+    enable_automation: bool?
+    disable_automation: bool?
+    trigger_automation: bool?
+  diagnostic_tools:
+    get_system_health: bool?
+    get_error_log_summary: bool?
+    list_unavailable_entities: bool?
+    get_recorder_stats: bool?
+    check_network_connectivity: bool?
+    list_custom_components: bool?
+    get_startup_time_breakdown: bool?
+    validate_all_automations: bool?
+    list_deprecated_features: bool?
+    get_integration_diagnostics: bool?
+homeassistant_api: true
+hassio_api: true
+hassio_role: admin
+auth_api: true
+supervisor_api: true
+privileged:
+  - SYS_ADMIN
+map:
+  - config:rw
+  - ssl:ro
+  - addons:ro
+  - backup:ro
+ingress: false
+panel_icon: mdi:api
