@@ -1,0 +1,25 @@
+name: "Baby Tracker"
+slug: "baby_tracker"
+version: "1.0.0"
+description: "Volg voedingen, luiers, gewicht en groei van je baby / Track your baby's feedings, diapers, weight and growth"
+url: "https://github.com/minermartijn"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+startup: application
+boot: auto
+init: false
+ingress: true
+ingress_port: 8765
+panel_icon: mdi:baby-bottle-outline
+panel_title: Baby Tracker
+options:
+  language: "nl"
+  baby_name: ""
+  baby_birth_date: ""
+schema:
+  language: list(nl|en)
+  baby_name: str
+  baby_birth_date: str

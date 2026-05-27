@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#7C6FE8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Baby Tracker</title>
+  <link rel="stylesheet" href="static/css/app.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="baby-name-header" id="hdr-name">Baby</div>
+      <div class="baby-age-header" id="hdr-age"></div>
+    </div>
+    <div class="header-right">
+      <span class="time-display" id="clock">00:00</span>
+      <button class="lang-btn" id="lang-toggle" onclick="App.toggleLang()">EN</button>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-content" id="main-content">
+
+    <!-- ── HOME / DASHBOARD ── -->
+    <section id="sec-home" class="section active">
+
+      <!-- Hero countdown card -->
+      <div class="hero-card" id="hero-card">
+        <div class="hero-label" id="hero-label" data-i18n="next_feeding">Volgende voeding over</div>
+        <div class="countdown-display" id="countdown">--:--</div>
+        <div class="countdown-sub" id="countdown-sub"></div>
+
+        <!-- Recommended bottle pill -->
+        <div class="next-feeding-pill" id="amount-pill" style="display:none">
+          🍼 <span id="pill-amount">120</span> ml
+        </div>
+
+        <!-- Daily progress -->
+        <div class="progress-row">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+          </div>
+          <span class="progress-label" id="progress-label">0/6</span>
+        </div>
+
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="hero-stat-value" id="stat-feedings">0</div>
+            <div class="hero-stat-label" data-i18n="feedings_today">Voedingen</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value" id="stat-total-ml">0 ml</div>
+            <div class="hero-stat-label" data-i18n="total_today">Totaal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule timeline -->
+      <div class="card" id="schedule-card" style="display:none">
+        <div class="card-title">📅 <span data-i18n="schedule_today">Schema vandaag</span></div>
+        <div class="timeline-wrap">
+          <div class="timeline" id="timeline"></div>
+        </div>
+      </div>
+
+      <!-- Today's stats row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-card-value" id="stat-diapers-wet">0</div>
+          <div class="stat-card-label">💧 <span data-i18n="wet">Nat</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="stat-diapers-dirty">0</div>
+          <div class="stat-card-label">💩 <span data-i18n="dirty">Vuil</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="stat-sleep">—</div>
+          <div class="stat-card-label">💤 <span data-i18n="sleeping">Slaap</span></div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="card">
+        <div class="card-title">⚡ <span data-i18n="quick_log">Snel registreren</span></div>
+        <div class="quick-actions">
+          <button class="quick-btn feeding" onclick="App.quickFeeding()">
+            <span class="icon">🍼</span>
+            <span data-i18n="btn_feeding">Voeding</span>
+          </button>
+          <button class="quick-btn diaper-w" onclick="App.quickDiaper('wet')">
+            <span class="icon">💧</span>
+            <span data-i18n="btn_wet">Nat</span>
+          </button>
+          <button class="quick-btn diaper-d" onclick="App.quickDiaper('dirty')">
+            <span class="icon">💩</span>
+            <span data-i18n="btn_dirty">Vuil</span>
+          </button>
+          <button class="quick-btn diaper-b" onclick="App.quickDiaper('both')">
+            <span class="icon">🟢</span>
+            <span data-i18n="btn_both_diaper">Beide</span>
+          </button>
+          <button class="quick-btn weight" onclick="App.showSection('weight')">
+            <span class="icon">⚖️</span>
+            <span data-i18n="btn_weight">Gewicht</span>
+          </button>
+          <button class="quick-btn sleep" onclick="App.toggleSleep()">
+            <span class="icon" id="sleep-icon">💤</span>
+            <span data-i18n="btn_sleep" id="sleep-label">Slaap</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Last feeding info -->
+      <div class="card-sm" id="last-feeding-card">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">🍼</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-muted)" data-i18n="last_feeding">Laatste voeding</div>
+            <div style="font-size:16px;font-weight:800;color:var(--text)" id="last-feeding-info" data-i18n="no_feeding_yet">Nog niet gevoed vandaag</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── FEEDINGS ── -->
+    <section id="sec-feedings" class="section">
+      <div class="section-title">
+        <span class="section-title-icon">🍼</span>
+        <span data-i18n="feedings_title">Voedingen</span>
+      </div>
+
+      <div class="date-tabs" id="feedings-date-tabs"></div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="feedings-stats">
+        <div class="stat-card">
+          <div class="stat-card-value" id="fs-count">0</div>
+          <div class="stat-card-label" data-i18n="feedings_today">Vandaag</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="fs-total">0 ml</div>
+          <div class="stat-card-label" data-i18n="total_today">Totaal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="fs-avg">— ml</div>
+          <div class="stat-card-label" data-i18n="avg_amount">Gem.</div>
+        </div>
+      </div>
+
+      <div class="history-list" id="feedings-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">🍼</div>
+          <div class="empty-state-text" data-i18n="no_feedings">Geen voedingen gevonden</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DIAPERS ── -->
+    <section id="sec-diapers" class="section">
+      <div class="section-title">
+        <span class="section-title-icon">👶</span>
+        <span data-i18n="diapers_title">Luierwissel</span>
+      </div>
+
+      <div class="date-tabs" id="diapers-date-tabs"></div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-card-value" id="ds-wet">0</div>
+          <div class="stat-card-label">💧 <span data-i18n="wet_count">Nat</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="ds-dirty">0</div>
+          <div class="stat-card-label">💩 <span data-i18n="dirty_count">Vuil</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="ds-total">0</div>
+          <div class="stat-card-label" data-i18n="total_today">Totaal</div>
+        </div>
+      </div>
+
+      <div class="history-list" id="diapers-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">👶</div>
+          <div class="empty-state-text" data-i18n="no_diapers">Geen luiers gevonden</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── WEIGHT ── -->
+    <section id="sec-weight" class="section">
+      <div class="section-title">
+        <span class="section-title-icon">⚖️</span>
+        <span data-i18n="weight_title">Gewicht</span>
+      </div>
+
+      <!-- Current weight -->
+      <div class="card">
+        <div class="card-title" data-i18n="current_weight">Huidig gewicht</div>
+        <div class="weight-display" id="weight-display">
+          <span class="weight-big" id="weight-value">—</span>
+          <span class="weight-unit"> g</span>
+        </div>
+        <div style="text-align:center;margin-top:8px;font-size:13px;color:var(--text-muted)" id="weight-change"></div>
+      </div>
+
+      <!-- Calculator -->
+      <div class="card" id="calc-card">
+        <div class="card-title">🧮 <span data-i18n="calc_title">Voeding berekenen</span></div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="calc_weight">Gewicht baby (gram)</label>
+          <input type="number" class="form-input" id="calc-weight-input" placeholder="4900" min="500" max="15000" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="calc_feedings">Aantal voedingen per dag</label>
+          <input type="number" class="form-input" id="calc-feedings-input" placeholder="6" min="3" max="12" />
+        </div>
+        <button class="btn btn-primary" onclick="App.runCalculator()" data-i18n="calc_btn">Bereken</button>
+        <div id="calc-result" style="display:none" class="calc-result">
+          <div class="calc-result-value" id="calc-result-value">120</div>
+          <div class="calc-result-unit">ml <span data-i18n="per_feeding">per voeding</span></div>
+          <div class="calc-result-sub" id="calc-result-sub"></div>
+        </div>
+      </div>
+
+      <!-- Weight chart -->
+      <div class="card">
+        <div class="card-title">📈 <span data-i18n="weight_title">Gewicht verloop</span></div>
+        <div class="chart-container">
+          <canvas id="weight-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="history-list" id="weight-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">⚖️</div>
+          <div class="empty-state-text" data-i18n="no_weight">Geen gewicht gevonden</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SETTINGS / SCHEDULE ── -->
+    <section id="sec-settings" class="section">
+      <div class="section-title">
+        <span class="section-title-icon">⚙️</span>
+        <span data-i18n="settings_title">Instellingen</span>
+      </div>
+
+      <!-- Baby profile -->
+      <div class="card">
+        <div class="card-title">👶 <span data-i18n="baby_profile">Baby profiel</span></div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="baby_name">Naam baby</label>
+          <input type="text" class="form-input" id="set-name" placeholder="Bijv. Liam" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="baby_birth">Geboortedatum</label>
+          <input type="date" class="form-input" id="set-birth" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="baby_gender">Geslacht</label>
+          <select class="form-input" id="set-gender">
+            <option value="boy" data-i18n="gender_boy">Jongen</option>
+            <option value="girl" data-i18n="gender_girl">Meisje</option>
+            <option value="other" data-i18n="gender_other">Anders</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="App.saveBaby()" data-i18n="save_settings">Opslaan</button>
+      </div>
+
+      <!-- Schedule planner -->
+      <div class="card">
+        <div class="card-title">📅 <span data-i18n="schedule_title">Voedingsschema</span></div>
+
+        <div class="form-group">
+          <label class="form-label" data-i18n="calc_weight">Gewicht baby (gram)</label>
+          <input type="number" class="form-input" id="sched-weight" placeholder="4900" min="500" max="15000" />
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label" data-i18n="schedule_num">Aantal voedingen</label>
+            <input type="number" class="form-input" id="sched-num" placeholder="6" min="3" max="12" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="schedule_buf">Buffer (min)</label>
+            <input type="number" class="form-input" id="sched-buf" placeholder="20" min="0" max="60" />
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label" data-i18n="schedule_first">Eerste voeding</label>
+            <input type="time" class="form-input" id="sched-first" value="06:00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="schedule_last">Laatste (opt.)</label>
+            <input type="time" class="form-input" id="sched-last" />
+          </div>
+        </div>
+
+        <!-- Blocked windows -->
+        <div class="card-title" style="margin-top:8px">🚫 <span data-i18n="blocked_title">Geblokkeerde tijden</span></div>
+        <div id="blocked-list"></div>
+        <button class="btn btn-secondary" onclick="App.showBlockedModal()" style="margin-bottom:16px">
+          ➕ <span data-i18n="blocked_add">Tijd toevoegen</span>
+        </button>
+
+        <!-- Calculated result preview -->
+        <div id="sched-result-preview" style="display:none" class="calc-result">
+          <div style="font-size:13px;font-weight:700;color:#047857;margin-bottom:6px" data-i18n="calc_result">Aanbevolen per fles</div>
+          <div class="calc-result-value" id="sched-amount-preview">120</div>
+          <div class="calc-result-unit">ml</div>
+          <div class="calc-result-sub" id="sched-formula-preview"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+          <button class="btn btn-secondary" onclick="App.previewSchedule()" data-i18n="calc_schedule">Schema berekenen</button>
+          <button class="btn btn-primary" onclick="App.saveSchedule()" data-i18n="save_schedule">Schema opslaan</button>
+        </div>
+      </div>
+
+      <!-- Schedule preview result -->
+      <div class="card" id="sched-preview-card" style="display:none">
+        <div class="card-title">⏰ <span data-i18n="schedule_title">Voedingstijden</span></div>
+        <div id="sched-preview-list"></div>
+        <div id="sched-warnings"></div>
+      </div>
+
+      <!-- Language toggle -->
+      <div class="card">
+        <div class="card-title">🌐 Taal / Language</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <button class="btn" id="btn-nl" onclick="App.setLang('nl')" style="background:var(--primary-light);color:var(--primary);border:2px solid var(--primary)">🇳🇱 Nederlands</button>
+          <button class="btn btn-secondary" id="btn-en" onclick="App.setLang('en')">🇬🇧 English</button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ═══ BOTTOM NAV ═══ -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="App.showSection('home')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label" data-i18n="nav_home">Thuis</span>
+    </button>
+    <button class="nav-btn" id="nav-feedings" onclick="App.showSection('feedings')">
+      <span class="nav-icon">🍼</span>
+      <span class="nav-label" data-i18n="nav_feedings">Voedingen</span>
+    </button>
+    <button class="nav-btn" id="nav-diapers" onclick="App.showSection('diapers')">
+      <span class="nav-icon">👶</span>
+      <span class="nav-label" data-i18n="nav_diapers">Luiers</span>
+    </button>
+    <button class="nav-btn" id="nav-weight" onclick="App.showSection('weight')">
+      <span class="nav-icon">⚖️</span>
+      <span class="nav-label" data-i18n="nav_weight">Gewicht</span>
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="App.showSection('settings')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label" data-i18n="nav_settings">Schema</span>
+    </button>
+  </nav>
+
+  <!-- ═══ FAB ═══ -->
+  <button class="fab hidden" id="fab" onclick="App.onFab()">＋</button>
+
+</div><!-- #app -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Add Feeding Modal -->
+<div class="modal-overlay" id="modal-feeding">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🍼 <span data-i18n="add_feeding">Voeding toevoegen</span></div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="feeding_time">Tijdstip</label>
+      <input type="datetime-local" class="form-input" id="f-time" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="feeding_amount">Hoeveelheid (ml)</label>
+      <input type="number" class="form-input" id="f-amount" placeholder="120" min="0" max="500" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="feeding_type">Type voeding</label>
+      <div class="type-selector">
+        <button class="type-option selected" data-type="bottle" onclick="App.selectFeedingType('bottle')">
+          <span class="emoji">🍼</span>
+          <span data-i18n="bottle">Fles</span>
+        </button>
+        <button class="type-option" data-type="breast_left" onclick="App.selectFeedingType('breast_left')">
+          <span class="emoji">🤱</span>
+          <span data-i18n="breast_left">Links</span>
+        </button>
+        <button class="type-option" data-type="breast_right" onclick="App.selectFeedingType('breast_right')">
+          <span class="emoji">🤱</span>
+          <span data-i18n="breast_right">Rechts</span>
+        </button>
+        <button class="type-option" data-type="both_breasts" onclick="App.selectFeedingType('both_breasts')">
+          <span class="emoji">🤱</span>
+          <span data-i18n="both_breasts">Beide</span>
+        </button>
+        <button class="type-option" data-type="solid" onclick="App.selectFeedingType('solid')">
+          <span class="emoji">🥣</span>
+          <span data-i18n="solid">Vast</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="feeding_notes">Notities</label>
+      <input type="text" class="form-input" id="f-notes" placeholder="..." />
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+      <button class="btn btn-secondary" onclick="App.closeModal('modal-feeding')" data-i18n="cancel">Annuleren</button>
+      <button class="btn btn-primary" onclick="App.saveFeeding()" data-i18n="save">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Diaper Modal -->
+<div class="modal-overlay" id="modal-diaper">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👶 <span data-i18n="add_diaper">Luier toevoegen</span></div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="diaper_time">Tijdstip</label>
+      <input type="datetime-local" class="form-input" id="d-time" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="diaper_type_lbl">Type luier</label>
+      <div class="type-selector">
+        <button class="type-option selected" data-type="wet" onclick="App.selectDiaperType('wet')">
+          <span class="emoji">💧</span>
+          <span data-i18n="wet">Nat</span>
+        </button>
+        <button class="type-option" data-type="dirty" onclick="App.selectDiaperType('dirty')">
+          <span class="emoji">💩</span>
+          <span data-i18n="dirty">Vuil</span>
+        </button>
+        <button class="type-option" data-type="both" onclick="App.selectDiaperType('both')">
+          <span class="emoji">🟢</span>
+          <span data-i18n="both">Beide</span>
+        </button>
+        <button class="type-option" data-type="dry" onclick="App.selectDiaperType('dry')">
+          <span class="emoji">✅</span>
+          <span data-i18n="dry">Droog</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="feeding_notes">Notities</label>
+      <input type="text" class="form-input" id="d-notes" placeholder="..." />
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+      <button class="btn btn-secondary" onclick="App.closeModal('modal-diaper')" data-i18n="cancel">Annuleren</button>
+      <button class="btn btn-primary" onclick="App.saveDiaper()" data-i18n="save">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Weight Modal -->
+<div class="modal-overlay" id="modal-weight">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚖️ <span data-i18n="add_weight">Gewicht toevoegen</span></div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="weight_date">Datum & tijd</label>
+      <input type="datetime-local" class="form-input" id="w-time" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="weight_amount">Gewicht (gram)</label>
+      <input type="number" class="form-input" id="w-amount" placeholder="4900" min="500" max="15000" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="weight_notes">Notities</label>
+      <input type="text" class="form-input" id="w-notes" placeholder="..." />
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+      <button class="btn btn-secondary" onclick="App.closeModal('modal-weight')" data-i18n="cancel">Annuleren</button>
+      <button class="btn btn-primary" onclick="App.saveWeight()" data-i18n="save">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Blocked Window Modal -->
+<div class="modal-overlay" id="modal-blocked">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🚫 <span data-i18n="blocked_add">Geblokkeerde tijd</span></div>
+
+    <div class="form-group">
+      <label class="form-label" data-i18n="blocked_label">Omschrijving</label>
+      <input type="text" class="form-input" id="bw-label" placeholder="Bijv. Bad tijd, Uitstapje..." />
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label" data-i18n="blocked_start">Van</label>
+        <input type="time" class="form-input" id="bw-start" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="blocked_end">Tot</label>
+        <input type="time" class="form-input" id="bw-end" />
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+      <button class="btn btn-secondary" onclick="App.closeModal('modal-blocked')" data-i18n="cancel">Annuleren</button>
+      <button class="btn btn-primary" onclick="App.saveBlockedWindow()" data-i18n="save">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST CONTAINER ═══ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══ SCRIPTS ═══ -->
+<script src="static/js/i18n.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="static/js/app.js"></script>
+</body>
+</html>
