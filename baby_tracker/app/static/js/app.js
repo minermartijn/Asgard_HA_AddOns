@@ -13,8 +13,9 @@ const State = {
   lang: 'nl',
   baby: null,
   schedule: null,
-  feedingsDay: new Date().toISOString().slice(0, 10),
-  diapersDay: new Date().toISOString().slice(0, 10),
+  feedingsDay: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
+  diapersDay: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
+  clockFormat: localStorage.getItem('bt_clockFormat') || '24h',
   feedingType: 'bottle',
   diaperType: 'wet',
   blockedWindows: [],
@@ -66,7 +67,7 @@ const api = {
   getTodaySchedule:  ()     => apiFetch('schedule/today'),
 
   getSleepActive:    ()     => apiFetch('sleep/active'),
-  startSleep:        ()     => apiFetch('sleep', { method: 'POST', body: JSON.stringify({ started_at: new Date().toISOString() }) }),
+  startSleep:        ()     => apiFetch('sleep', { method: 'POST', body: JSON.stringify({ started_at: nowLocal() }) }),
   endSleep:          ()     => apiFetch('sleep/end', { method: 'POST', body: '{}' }),
 };
 
@@ -88,13 +89,22 @@ function toast(msg, type = 'success') {
    ════════════════════════════════════════════ */
 function nowLocal() {
   const d = new Date();
-  // Format: YYYY-MM-DDTHH:MM (for datetime-local inputs)
-  return d.toISOString().slice(0, 16);
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function localDateStr(d) {
+  if (!d) d = new Date();
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 10);
 }
 
 function formatTime(isoStr) {
   if (!isoStr) return '—';
   const d = new Date(isoStr);
+  if (State.clockFormat === '12h') {
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
   return d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -106,7 +116,7 @@ function formatDateTime(isoStr) {
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
   const isYesterday = d.toDateString() === yesterday.toDateString();
 
-  const time = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  const time = formatTime(isoStr);
   if (isToday) return `${t('today')} ${time}`;
   if (isYesterday) return `${t('yesterday')} ${time}`;
   return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' ' + time;
@@ -151,7 +161,12 @@ function startClock() {
   function tick() {
     const now = new Date();
     const el = document.getElementById('clock');
-    if (el) el.textContent = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    if (!el) return;
+    if (State.clockFormat === '12h') {
+      el.textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } else {
+      el.textContent = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    }
   }
   tick();
   setInterval(tick, 10000);
@@ -442,7 +457,7 @@ async function saveFeeding() {
 
   try {
     await api.addFeeding({
-      started_at: new Date(timeVal).toISOString(),
+      started_at: timeVal,
       amount_ml: amount ? parseFloat(amount) : null,
       feeding_type: State.feedingType,
       notes: document.getElementById('f-notes').value || null,
@@ -543,7 +558,7 @@ async function saveDiaper() {
 
   try {
     await api.addDiaper({
-      changed_at: new Date(timeVal).toISOString(),
+      changed_at: timeVal,
       diaper_type: State.diaperType,
       notes: document.getElementById('d-notes').value || null,
     });
@@ -704,7 +719,7 @@ async function saveWeight() {
 
   try {
     await api.addWeight({
-      measured_at: new Date(timeVal).toISOString(),
+      measured_at: timeVal,
       weight_g: parseFloat(amount),
       notes: document.getElementById('w-notes').value || null,
     });
@@ -948,13 +963,13 @@ function renderDateTabs(section, activeDay) {
   for (let i = 0; i < 5; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(localDateStr(d));
   }
 
   el.innerHTML = days.map(day => {
     const d = new Date(day + 'T12:00:00');
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const today = localDateStr();
+    const yesterday = localDateStr(new Date(Date.now() - 86400000));
     let label;
     if (day === today) label = t('today');
     else if (day === yesterday) label = t('yesterday');
@@ -1045,8 +1060,37 @@ function confetti() {
   }
 }
 
+function setClockFormat(fmt) {
+  State.clockFormat = fmt;
+  localStorage.setItem('bt_clockFormat', fmt);
+  updateClockButtons();
+  startClock();
+  // Re-render active section to update displayed times
+  const s = State.currentSection;
+  if (s === 'feedings') loadFeedings();
+  else if (s === 'diapers') loadDiapers();
+  else if (s === 'weight') loadWeight();
+  else loadDashboard();
+}
+
+function updateClockButtons() {
+  const btn24 = document.getElementById('btn-24h');
+  const btn12 = document.getElementById('btn-12h');
+  if (!btn24 || !btn12) return;
+  if (State.clockFormat === '24h') {
+    btn24.style.cssText = 'background:var(--primary-light);color:var(--primary);border:2px solid var(--primary)';
+    btn24.className = 'btn';
+    btn12.style.cssText = '';
+    btn12.className = 'btn btn-secondary';
+  } else {
+    btn12.style.cssText = 'background:var(--primary-light);color:var(--primary);border:2px solid var(--primary)';
+    btn12.className = 'btn';
+    btn24.style.cssText = '';
+    btn24.className = 'btn btn-secondary';
+  }
+}
+
 /* ════════════════════════════════════════════
-   AUTO REFRESH
    ════════════════════════════════════════════ */
 function startAutoRefresh() {
   // Refresh dashboard every 60 seconds when on home view
@@ -1064,6 +1108,9 @@ async function init() {
   State.lang = savedLang;
   setLang(savedLang);
   document.getElementById('lang-toggle').textContent = savedLang === 'nl' ? 'EN' : 'NL';
+
+  // Apply clock format from storage
+  updateClockButtons();
 
   // Load config from HA options
   try {
@@ -1143,6 +1190,9 @@ window.App = {
   // Language
   toggleLang,
   setLang: setAppLang,
+
+  // Clock format
+  setClockFormat,
 };
 
 // Boot
