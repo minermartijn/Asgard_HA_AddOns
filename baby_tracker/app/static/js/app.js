@@ -67,7 +67,7 @@ const api = {
   getTodaySchedule:  ()     => apiFetch('schedule/today'),
 
   getSleepActive:    ()     => apiFetch('sleep/active'),
-  startSleep:        ()     => apiFetch('sleep', { method: 'POST', body: JSON.stringify({ started_at: nowLocal() }) }),
+  startSleep:        ()     => apiFetch('sleep', { method: 'POST', body: JSON.stringify({ started_at: nowLocal() + ':00' }) }),
   endSleep:          ()     => apiFetch('sleep/end', { method: 'POST', body: '{}' }),
 };
 
@@ -154,10 +154,13 @@ function calcAge(birthDateStr) {
   return `${months} ${t('months')}`;
 }
 
+let _clockInterval = null;
+
 /* ════════════════════════════════════════════
    CLOCK
    ════════════════════════════════════════════ */
 function startClock() {
+  if (_clockInterval) { clearInterval(_clockInterval); _clockInterval = null; }
   function tick() {
     const now = new Date();
     const el = document.getElementById('clock');
@@ -169,7 +172,7 @@ function startClock() {
     }
   }
   tick();
-  setInterval(tick, 10000);
+  _clockInterval = setInterval(tick, 10000);
 }
 
 /* ════════════════════════════════════════════
@@ -457,7 +460,7 @@ async function saveFeeding() {
 
   try {
     await api.addFeeding({
-      started_at: timeVal,
+      started_at: timeVal.length === 16 ? timeVal + ':00' : timeVal,
       amount_ml: amount ? parseFloat(amount) : null,
       feeding_type: State.feedingType,
       notes: document.getElementById('f-notes').value || null,
@@ -558,7 +561,7 @@ async function saveDiaper() {
 
   try {
     await api.addDiaper({
-      changed_at: timeVal,
+      changed_at: timeVal.length === 16 ? timeVal + ':00' : timeVal,
       diaper_type: State.diaperType,
       notes: document.getElementById('d-notes').value || null,
     });
@@ -719,7 +722,7 @@ async function saveWeight() {
 
   try {
     await api.addWeight({
-      measured_at: timeVal,
+      measured_at: timeVal.length === 16 ? timeVal + ':00' : timeVal,
       weight_g: parseFloat(amount),
       notes: document.getElementById('w-notes').value || null,
     });
