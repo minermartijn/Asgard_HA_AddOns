@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional, List
 
 from fastapi import FastAPI, Depends, HTTPException, Request
@@ -25,6 +25,22 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 def on_startup():
     init_db()
     logger.info("Baby Tracker started - database initialized")
+
+
+# ──────────────── Server Time ────────────────
+
+@app.get("/api/server-time")
+def get_server_time():
+    """Return the server's current local time and UTC offset.
+    The frontend uses this to display times in the server's timezone,
+    regardless of what timezone the user's browser reports."""
+    now_local = datetime.now()
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    offset_seconds = int((now_local - now_utc).total_seconds())
+    return {
+        "utc_offset_minutes": offset_seconds // 60,
+        "local_time": now_local.strftime("%Y-%m-%dT%H:%M:%S"),
+    }
 
 
 # ──────────────── Config ────────────────

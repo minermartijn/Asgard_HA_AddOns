@@ -8,13 +8,18 @@ const API_BASE = 'api';
 /* ════════════════════════════════════════════
    STATE
    ════════════════════════════════════════════ */
+/* Server's UTC offset in ms — set during init() via /api/server-time.
+   Using the SERVER timezone (not browser timezone) ensures correct time
+   display even when HA ingress runs the browser in UTC mode. */
+let _tzOffsetMs = 0;
+
 const State = {
   currentSection: 'home',
   lang: 'nl',
   baby: null,
   schedule: null,
-  feedingsDay: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
-  diapersDay: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
+  feedingsDay: new Date().toISOString().slice(0, 10), // updated in initServerTime()
+  diapersDay:  new Date().toISOString().slice(0, 10),
   clockFormat: localStorage.getItem('bt_clockFormat') || '24h',
   feedingType: 'bottle',
   diaperType: 'wet',
@@ -67,7 +72,7 @@ const api = {
   getTodaySchedule:  ()     => apiFetch('schedule/today'),
 
   getSleepActive:    ()     => apiFetch('sleep/active'),
-  startSleep:        ()     => apiFetch('sleep', { method: 'POST', body: JSON.stringify({ started_at: nowLocal() + ':00' }) }),
+  startSleep:        ()     => apiFetch('sleep', { method: 'POST', body: JSON.stringify({ started_at: nowLocal() }) }),
   endSleep:          ()     => apiFetch('sleep/end', { method: 'POST', body: '{}' }),
 };
 
@@ -85,46 +90,81 @@ function toast(msg, type = 'success') {
 }
 
 /* ════════════════════════════════════════════
-   TIME UTILITIES
+   SERVER-TIME INIT
+   Fetches the server's UTC offset once on startup so all time
+   calculations use the HA server timezone, not the browser timezone.
    ════════════════════════════════════════════ */
+async function initServerTime() {
+  try {
+    const data = await apiFetch('server-time');
+    _tzOffsetMs = (data.utc_offset_minutes || 0) * 60000;
+  } catch (e) {
+    // Fallback: try browser timezone (may still be wrong in HA ingress)
+    _tzOffsetMs = -new Date().getTimezoneOffset() * 60000;
+    console.warn('server-time unavailable, using browser offset:', _tzOffsetMs);
+  }
+  // Update today's date now that offset is known
+  const todayStr = new Date(Date.now() + _tzOffsetMs).toISOString().slice(0, 10);
+  State.feedingsDay = todayStr;
+  State.diapersDay  = todayStr;
+}
+
+/* ════════════════════════════════════════════
+   TIME UTILITIES
+   All functions use _tzOffsetMs (server offset) — NOT browser timezone.
+   ════════════════════════════════════════════ */
+
+/** Current server-local datetime as "YYYY-MM-DDTHH:MM:SS" for datetime-local inputs */
 function nowLocal() {
-  const d = new Date();
-  const offset = d.getTimezoneOffset() * 60000;
-  return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+  return new Date(Date.now() + _tzOffsetMs).toISOString().slice(0, 19);
 }
 
+/** Server-local date as "YYYY-MM-DD". Pass a UTC-based Date to get its server-local date. */
 function localDateStr(d) {
-  if (!d) d = new Date();
-  const offset = d.getTimezoneOffset() * 60000;
-  return new Date(d.getTime() - offset).toISOString().slice(0, 10);
+  const ms = d ? d.getTime() + _tzOffsetMs : Date.now() + _tzOffsetMs;
+  return new Date(ms).toISOString().slice(0, 10);
 }
 
+/** Format a stored ISO datetime string (server-local, no Z) for display.
+ *  Extracts hours/minutes directly from the string — no timezone math. */
 function formatTime(isoStr) {
   if (!isoStr) return '—';
-  const d = new Date(isoStr);
+  const timePart = isoStr.split('T')[1] || '';
+  const [hrStr, miStr] = timePart.split(':');
+  const h = parseInt(hrStr, 10) || 0;
+  const m = String(parseInt(miStr, 10) || 0).padStart(2, '0');
   if (State.clockFormat === '12h') {
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${m} ${ampm}`;
   }
-  return d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  return `${String(h).padStart(2, '0')}:${m}`;
 }
 
+/** Format a stored ISO datetime string with "Today" / "Yesterday" prefix */
 function formatDateTime(isoStr) {
   if (!isoStr) return '—';
-  const d = new Date(isoStr);
-  const today = new Date();
-  const isToday = d.toDateString() === today.toDateString();
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  const isYesterday = d.toDateString() === yesterday.toDateString();
-
+  const storedDate = isoStr.split('T')[0];
+  const serverNowMs = Date.now() + _tzOffsetMs;
+  const todayDate     = new Date(serverNowMs).toISOString().slice(0, 10);
+  const yesterdayDate = new Date(serverNowMs - 86400000).toISOString().slice(0, 10);
   const time = formatTime(isoStr);
-  if (isToday) return `${t('today')} ${time}`;
-  if (isYesterday) return `${t('yesterday')} ${time}`;
-  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' ' + time;
+  if (storedDate === todayDate)     return `${t('today')} ${time}`;
+  if (storedDate === yesterdayDate) return `${t('yesterday')} ${time}`;
+  const [yr, mo, da] = storedDate.split('-').map(Number);
+  const d = new Date(Date.UTC(yr, mo - 1, da));
+  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' }) + ' ' + time;
 }
 
+/** Human-readable "X min ago" using server time as reference */
 function timeAgo(isoStr) {
   if (!isoStr) return '';
-  const diff = Date.now() - new Date(isoStr).getTime();
+  // Stored time is server-local (e.g. "13:06" Amsterdam).
+  // Append 'Z' so JS treats it as UTC, then compare with server-now
+  // (Date.now() + offset = same "shifted" UTC base). The math cancels out correctly.
+  const storedMs   = new Date(isoStr + 'Z').getTime();
+  const serverNowMs = Date.now() + _tzOffsetMs;
+  const diff = serverNowMs - storedMs;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return t('just_now');
   if (mins < 60) return `${mins} ${t('min_ago')}`;
@@ -143,9 +183,8 @@ function msToHHMM(ms) {
 
 function calcAge(birthDateStr) {
   if (!birthDateStr) return '';
-  const birth = new Date(birthDateStr);
-  const now = new Date();
-  const totalDays = Math.floor((now - birth) / 86400000);
+  const birth = new Date(birthDateStr); // date-only string → UTC midnight (ES spec)
+  const totalDays = Math.floor((Date.now() + _tzOffsetMs - birth.getTime()) / 86400000);
   if (totalDays < 0) return '';
   if (totalDays < 14) return `${totalDays} ${t('days')}`;
   const weeks = Math.floor(totalDays / 7);
@@ -162,13 +201,18 @@ let _clockInterval = null;
 function startClock() {
   if (_clockInterval) { clearInterval(_clockInterval); _clockInterval = null; }
   function tick() {
-    const now = new Date();
     const el = document.getElementById('clock');
     if (!el) return;
+    // Use server offset so clock shows server-local time (not browser-local time)
+    const shifted = new Date(Date.now() + _tzOffsetMs);
+    const h = shifted.getUTCHours();
+    const m = String(shifted.getUTCMinutes()).padStart(2, '0');
     if (State.clockFormat === '12h') {
-      el.textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      el.textContent = `${h12}:${m} ${ampm}`;
     } else {
-      el.textContent = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+      el.textContent = `${String(h).padStart(2, '0')}:${m}`;
     }
   }
   tick();
@@ -963,21 +1007,22 @@ async function toggleSleep() {
 function renderDateTabs(section, activeDay) {
   const el = document.getElementById(`${section}-date-tabs`);
   const days = [];
+  const serverNowMs = Date.now() + _tzOffsetMs;
+  const todayDate     = new Date(serverNowMs).toISOString().slice(0, 10);
+  const yesterdayDate = new Date(serverNowMs - 86400000).toISOString().slice(0, 10);
   for (let i = 0; i < 5; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(localDateStr(d));
+    days.push(new Date(serverNowMs - i * 86400000).toISOString().slice(0, 10));
   }
 
   el.innerHTML = days.map(day => {
-    const d = new Date(day + 'T12:00:00');
-    const today = localDateStr();
-    const yesterday = localDateStr(new Date(Date.now() - 86400000));
     let label;
-    if (day === today) label = t('today');
-    else if (day === yesterday) label = t('yesterday');
-    else label = d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
-
+    if (day === todayDate)     label = t('today');
+    else if (day === yesterdayDate) label = t('yesterday');
+    else {
+      const [yr, mo, da] = day.split('-').map(Number);
+      label = new Date(Date.UTC(yr, mo - 1, da))
+        .toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    }
     return `<button class="date-tab ${day === activeDay ? 'active' : ''}"
       onclick="App.switchDay('${section}', '${day}')">${label}</button>`;
   }).join('');
@@ -1106,6 +1151,9 @@ function startAutoRefresh() {
    INITIALIZATION
    ════════════════════════════════════════════ */
 async function init() {
+  // Get server timezone offset FIRST — all time functions depend on this
+  await initServerTime();
+
   // Load saved language
   const savedLang = localStorage.getItem('bt_lang') || 'nl';
   State.lang = savedLang;
