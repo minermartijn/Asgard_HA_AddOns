@@ -1,6 +1,6 @@
 name: "Baby Tracker"
 slug: "baby_tracker"
-version: "1.0.3"
+version: "1.0.4"
 description: "Volg voedingen, luiers, gewicht en groei van je baby / Track your baby's feedings, diapers, weight and growth"
 url: "https://github.com/minermartijn"
 arch:

@@ -323,8 +323,9 @@ function renderDashboard(data) {
   if (data.last_feeding) {
     const lf = data.last_feeding;
     const amtStr = lf.amount_ml ? ` • ${lf.amount_ml} ml` : '';
-    document.getElementById('last-feeding-info').textContent =
-      `${formatTime(lf.started_at)}${amtStr} — ${timeAgo(lf.started_at)}`;
+    const lfi = document.getElementById('last-feeding-info');
+    lfi.removeAttribute('data-i18n'); // prevent applyTranslations from overwriting
+    lfi.textContent = `${formatTime(lf.started_at)}${amtStr} — ${timeAgo(lf.started_at)}`;
   } else {
     document.getElementById('last-feeding-info').setAttribute('data-i18n', 'no_feeding_yet');
     document.getElementById('last-feeding-info').textContent = t('no_feeding_yet');
@@ -360,14 +361,16 @@ function renderTimeline(schedule, feedings) {
   card.style.display = '';
 
   const feedingTimes = (feedings || []).map(f => formatTime(f.started_at));
-  const now = new Date();
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const serverNow = new Date(Date.now() + _tzOffsetMs);
+  const nowMins = serverNow.getUTCHours() * 60 + serverNow.getUTCMinutes();
 
+  let foundNext = false;
   tl.innerHTML = schedule.feeding_times.map((time, i) => {
     const [h, m] = time.split(':').map(Number);
     const slotMins = h * 60 + m;
     const isDone = feedingTimes.includes(time) || slotMins < nowMins - 30;
-    const isNext = !isDone && (slotMins >= nowMins - 15) && tl.querySelectorAll('.tl-item.next').length === 0;
+    const isNext = !isDone && !foundNext && (slotMins >= nowMins - 15);
+    if (isNext) foundNext = true;
     const cls = isDone ? 'done' : isNext ? 'next' : 'upcoming';
     const icon = isDone ? '✓' : isNext ? '🍼' : (i + 1).toString();
     const amtStr = schedule.amount_ml ? `${schedule.amount_ml}ml` : '';
@@ -392,8 +395,8 @@ function startCountdown(data) {
       return;
     }
 
-    const now = new Date();
-    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const serverNow = new Date(Date.now() + _tzOffsetMs);
+    const nowMins = serverNow.getUTCHours() * 60 + serverNow.getUTCMinutes();
 
     // Find next scheduled feeding
     let nextMins = null;
@@ -402,7 +405,11 @@ function startCountdown(data) {
       const slotMins = h * 60 + m;
       if (slotMins > nowMins) { nextMins = slotMins; break; }
     }
-    if (nextMins === null) nextMins = (parseInt(times[0]) * 60) + parseInt(times[0].split(':')[1]); // wrap to next day
+    // Wrap to next day if past all slots for today
+    if (nextMins === null) {
+      const [h0, m0] = times[0].split(':').map(Number);
+      nextMins = h0 * 60 + m0 + 24 * 60;
+    }
 
     const diffMs = (nextMins - nowMins) * 60000;
     const hero = document.getElementById('hero-card');
@@ -415,13 +422,16 @@ function startCountdown(data) {
       label.textContent = '⚠️';
       hero.style.background = 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)';
     } else {
-      countdown.textContent = msToHHMM(diffMs);
+      const totalMin = Math.floor(diffMs / 60000);
+      const hh = Math.floor(totalMin / 60);
+      const mm = String(totalMin % 60).padStart(2, '0');
+      countdown.textContent = `${hh}:${mm} uur`;
       label.textContent = t('next_feeding');
       hero.style.background = '';
       // Find the actual next time slot
       const nextSlot = times.find(time => {
-        const [h, m] = time.split(':').map(Number);
-        return (h * 60 + m) > nowMins;
+        const [sh, sm] = time.split(':').map(Number);
+        return (sh * 60 + sm) > nowMins;
       });
       sub.textContent = nextSlot ? `om ${nextSlot}` : '';
     }
@@ -1185,11 +1195,11 @@ async function init() {
   // Auto-refresh
   startAutoRefresh();
 
+  // Apply translations BEFORE loading dashboard data so dynamic content isn't overwritten
+  applyTranslations();
+
   // Load initial view
   await loadDashboard();
-
-  // Apply translations
-  applyTranslations();
 }
 
 /* ════════════════════════════════════════════

@@ -51,8 +51,10 @@ def parse_hhmm(time_str: str) -> int:
 
 
 def minutes_to_hhmm(minutes: int) -> str:
-    """Convert minutes since midnight to HH:MM string."""
+    """Convert minutes since midnight to HH:MM string, rounded to nearest 5 min."""
     minutes = int(minutes) % (24 * 60)
+    # Round to nearest 5 minutes for clean schedule display
+    minutes = int(round(minutes / 5) * 5) % (24 * 60)
     h = minutes // 60
     m = minutes % 60
     return f"{h:02d}:{m:02d}"
