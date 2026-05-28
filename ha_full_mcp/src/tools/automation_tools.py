@@ -51,14 +51,17 @@ def get_automation_tool_definitions() -> list[Tool]:
                     },
                     "trigger": {
                         "type": "array",
+                        "items": {"type": "object"},
                         "description": "List of triggers (e.g., state change, time, event)",
                     },
                     "condition": {
                         "type": "array",
+                        "items": {"type": "object"},
                         "description": "Optional list of conditions that must be met",
                     },
                     "action": {
                         "type": "array",
+                        "items": {"type": "object"},
                         "description": "List of actions to perform when triggered",
                     },
                     "mode": {
@@ -89,14 +92,17 @@ def get_automation_tool_definitions() -> list[Tool]:
                     },
                     "trigger": {
                         "type": "array",
+                        "items": {"type": "object"},
                         "description": "List of triggers",
                     },
                     "condition": {
                         "type": "array",
+                        "items": {"type": "object"},
                         "description": "Optional list of conditions",
                     },
                     "action": {
                         "type": "array",
+                        "items": {"type": "object"},
                         "description": "List of actions",
                     },
                     "mode": {

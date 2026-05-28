@@ -59,6 +59,7 @@ def get_dashboard_tool_definitions() -> list[Tool]:
                     },
                     "views": {
                         "type": "array",
+                        "items": {"type": "object"},
                         "description": "Optional: Array of view configurations. Each view contains title, icon, and cards. Can be added later.",
                     },
                 },

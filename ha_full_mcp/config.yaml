@@ -1,5 +1,5 @@
 name: HA Full MCP Server
-version: "1.8.0"
+version: "1.9.0"
 slug: ha_full_mcp_server
 description: Model Context Protocol server for Home Assistant with full API access including backup, integration, entity management, and comprehensive diagnostics
 url: https://github.com/yourusername/ha-full-mcp-server
