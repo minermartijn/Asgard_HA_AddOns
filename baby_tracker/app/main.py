@@ -7,15 +7,16 @@ from typing import Optional, List
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from .database import get_db, init_db
+from .database import get_db, init_db, engine
 from . import crud, schemas, calculator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Baby Tracker", version="1.0.0")
+app = FastAPI(title="Baby Tracker", version="1.0.5")
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
@@ -24,7 +25,25 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 @app.on_event("startup")
 def on_startup():
     init_db()
+    # Schema migrations — safe to run on every startup (errors are silently ignored)
+    _run_migrations()
     logger.info("Baby Tracker started - database initialized")
+
+
+def _run_migrations():
+    """Apply any incremental DB schema changes that CREATE TABLE cannot handle."""
+    migrations = [
+        "ALTER TABLE diaper_entries ADD COLUMN poop_color VARCHAR(20)",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+                logger.info("Migration applied: %s", sql)
+            except Exception:
+                # Column already exists or other benign error — skip
+                conn.rollback()
 
 
 # ──────────────── Server Time ────────────────
@@ -306,6 +325,7 @@ def get_dashboard(db: Session = Depends(get_db)):
             "id": d.id,
             "changed_at": d.changed_at.isoformat() if d.changed_at else None,
             "diaper_type": d.diaper_type,
+            "poop_color": d.poop_color,
             "notes": d.notes,
         }
 

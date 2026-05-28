@@ -213,25 +213,6 @@
         <div style="text-align:center;margin-top:8px;font-size:13px;color:var(--text-muted)" id="weight-change"></div>
       </div>
 
-      <!-- Calculator -->
-      <div class="card" id="calc-card">
-        <div class="card-title">🧮 <span data-i18n="calc_title">Voeding berekenen</span></div>
-        <div class="form-group">
-          <label class="form-label" data-i18n="calc_weight">Gewicht baby (gram)</label>
-          <input type="number" class="form-input" id="calc-weight-input" placeholder="4900" min="500" max="15000" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" data-i18n="calc_feedings">Aantal voedingen per dag</label>
-          <input type="number" class="form-input" id="calc-feedings-input" placeholder="6" min="3" max="12" />
-        </div>
-        <button class="btn btn-primary" onclick="App.runCalculator()" data-i18n="calc_btn">Bereken</button>
-        <div id="calc-result" style="display:none" class="calc-result">
-          <div class="calc-result-value" id="calc-result-value">120</div>
-          <div class="calc-result-unit">ml <span data-i18n="per_feeding">per voeding</span></div>
-          <div class="calc-result-sub" id="calc-result-sub"></div>
-        </div>
-      </div>
-
       <!-- Weight chart -->
       <div class="card">
         <div class="card-title">📈 <span data-i18n="weight_title">Gewicht verloop</span></div>
@@ -357,7 +338,7 @@
 
       <!-- Version info -->
       <div style="text-align:center;padding:8px;color:var(--text-muted);font-size:12px">
-        Baby Tracker v1.0.3
+        Baby Tracker v1.0.5
       </div>
 
     </section>
@@ -482,6 +463,22 @@
       </div>
     </div>
 
+    <!-- Poop color picker — shown only for dirty/both -->
+    <div class="form-group" id="poop-color-group" style="display:none">
+      <label class="form-label">💩 Kleur ontlasting</label>
+      <div class="poop-colors" id="poop-color-swatches">
+        <button class="poop-color-btn" data-color="#E8B84B" onclick="App.selectPoopColor('#E8B84B')" title="Mosterd geel" style="background:#E8B84B"></button>
+        <button class="poop-color-btn" data-color="#C87D3A" onclick="App.selectPoopColor('#C87D3A')" title="Oranje bruin" style="background:#C87D3A"></button>
+        <button class="poop-color-btn" data-color="#A07050" onclick="App.selectPoopColor('#A07050')" title="Licht bruin" style="background:#A07050"></button>
+        <button class="poop-color-btn" data-color="#6B4226" onclick="App.selectPoopColor('#6B4226')" title="Bruin" style="background:#6B4226"></button>
+        <button class="poop-color-btn" data-color="#2C1A0E" onclick="App.selectPoopColor('#2C1A0E')" title="Donker bruin" style="background:#2C1A0E"></button>
+        <button class="poop-color-btn" data-color="#4A7C59" onclick="App.selectPoopColor('#4A7C59')" title="Groen" style="background:#4A7C59"></button>
+        <button class="poop-color-btn" data-color="#1A1A1A" onclick="App.selectPoopColor('#1A1A1A')" title="Zwart (meconium)" style="background:#1A1A1A"></button>
+        <button class="poop-color-btn" data-color="#CC2200" onclick="App.selectPoopColor('#CC2200')" title="Rood" style="background:#CC2200"></button>
+        <button class="poop-color-btn" data-color="#D0C8B8" onclick="App.selectPoopColor('#D0C8B8')" title="Krijtwit/grijs" style="background:#D0C8B8"></button>
+      </div>
+    </div>
+
     <div class="form-group">
       <label class="form-label" data-i18n="feeding_notes">Notities</label>
       <input type="text" class="form-input" id="d-notes" placeholder="..." />
@@ -548,6 +545,68 @@
       <button class="btn btn-secondary" onclick="App.closeModal('modal-blocked')" data-i18n="cancel">Annuleren</button>
       <button class="btn btn-primary" onclick="App.saveBlockedWindow()" data-i18n="save">Toevoegen</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ FIRST-TIME SETUP MODAL ═══ -->
+<div class="modal-overlay modal-overlay--welcome" id="modal-setup">
+  <div class="modal-sheet modal-sheet--setup">
+    <div class="modal-title">👋 Welkom bij Baby Tracker!</div>
+    <p class="setup-intro">Laten we je baby even snel instellen zodat we direct kunnen beginnen.</p>
+
+    <div class="form-group">
+      <label class="form-label">👶 Naam baby</label>
+      <input type="text" class="form-input" id="setup-name" placeholder="Bijv. Liam" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">🎂 Geboortedatum</label>
+      <input type="date" class="form-input" id="setup-birth" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Geslacht</label>
+      <div class="type-selector">
+        <button class="type-option selected" data-gender="boy" onclick="App.selectSetupGender('boy')">
+          <span class="emoji">💙</span><span>Jongen</span>
+        </button>
+        <button class="type-option" data-gender="girl" onclick="App.selectSetupGender('girl')">
+          <span class="emoji">💗</span><span>Meisje</span>
+        </button>
+        <button class="type-option" data-gender="neutral" onclick="App.selectSetupGender('neutral')">
+          <span class="emoji">💚</span><span>Neutraal</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">⚖️ Huidig gewicht (gram)</label>
+      <input type="number" class="form-input" id="setup-weight" placeholder="4000" min="500" max="15000" />
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">🌅 Eerste voeding</label>
+        <input type="time" class="form-input" id="setup-first" value="07:00" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">🌙 Laatste voeding</label>
+        <input type="time" class="form-input" id="setup-last" value="23:00" />
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">🍼 Voedingen per dag</label>
+        <input type="number" class="form-input" id="setup-num" value="6" min="3" max="12" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">⏱ Burp buffer (min)</label>
+        <input type="number" class="form-input" id="setup-buf" value="20" min="0" max="60" />
+      </div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="App.saveSetup()">🚀 Starten!</button>
   </div>
 </div>
 

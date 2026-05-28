@@ -23,6 +23,8 @@ const State = {
   clockFormat: localStorage.getItem('bt_clockFormat') || '24h',
   feedingType: 'bottle',
   diaperType: 'wet',
+  poopColor: null,
+  setupGender: 'boy',
   blockedWindows: [],
   weightChart: null,
   refreshTimer: null,
@@ -368,8 +370,11 @@ function renderTimeline(schedule, feedings) {
   tl.innerHTML = schedule.feeding_times.map((time, i) => {
     const [h, m] = time.split(':').map(Number);
     const slotMins = h * 60 + m;
-    const isDone = feedingTimes.includes(time) || slotMins < nowMins - 30;
-    const isNext = !isDone && !foundNext && (slotMins >= nowMins - 15);
+    // Midnight (00:00) is the LAST feeding of the day, not the first.
+    // Treat it as 1440 min so it is never auto-marked "past" during daytime.
+    const effectiveMins = slotMins === 0 ? 24 * 60 : slotMins;
+    const isDone = feedingTimes.includes(time) || effectiveMins < nowMins - 30;
+    const isNext = !isDone && !foundNext && (effectiveMins >= nowMins - 15);
     if (isNext) foundNext = true;
     const cls = isDone ? 'done' : isNext ? 'next' : 'upcoming';
     const icon = isDone ? '✓' : isNext ? '🍼' : (i + 1).toString();
@@ -581,23 +586,32 @@ function renderDiapersList(items) {
   const typeEmoji = { wet: '💧', dirty: '💩', both: '🟢', dry: '✅' };
   const typeBg = { wet: '#EBF8FF', dirty: '#FFFBEB', both: '#F0FFF4', dry: '#F0FFF4' };
 
-  list.innerHTML = [...items].reverse().map(d => `
+  list.innerHTML = [...items].reverse().map(d => {
+    const colorDot = (d.poop_color && (d.diaper_type === 'dirty' || d.diaper_type === 'both'))
+      ? `<span class="poop-color-dot" style="background:${d.poop_color}" title="${d.poop_color}"></span>`
+      : '';
+    return `
     <div class="history-item">
       <div class="history-icon" style="background:${typeBg[d.diaper_type] || '#F5F5F5'}">
         ${typeEmoji[d.diaper_type] || '👶'}
       </div>
       <div class="history-body">
-        <div class="history-title">${t(d.diaper_type || 'wet')}</div>
+        <div class="history-title">${t(d.diaper_type || 'wet')}${colorDot}</div>
         <div class="history-sub">${d.notes || ''}</div>
       </div>
       <div class="history-time">${formatTime(d.changed_at)}</div>
       <button class="history-delete" onclick="App.deleteDiaper(${d.id})" title="${t('delete')}">🗑</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function openDiaperModal(prefillType) {
   document.getElementById('d-time').value = nowLocal();
   document.getElementById('d-notes').value = '';
+  // Reset poop color
+  State.poopColor = null;
+  document.querySelectorAll('.poop-color-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('poop-color-group').style.display = 'none';
   selectDiaperType(prefillType || 'wet');
   openModal('modal-diaper');
 }
@@ -606,6 +620,17 @@ function selectDiaperType(type) {
   State.diaperType = type;
   document.querySelectorAll('#modal-diaper .type-option').forEach(b => {
     b.classList.toggle('selected', b.dataset.type === type);
+  });
+  // Show poop color picker only when type involves dirty
+  const showColor = type === 'dirty' || type === 'both';
+  document.getElementById('poop-color-group').style.display = showColor ? '' : 'none';
+  if (!showColor) State.poopColor = null;
+}
+
+function selectPoopColor(color) {
+  State.poopColor = color;
+  document.querySelectorAll('.poop-color-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.color === color);
   });
 }
 
@@ -618,6 +643,7 @@ async function saveDiaper() {
       changed_at: timeVal.length === 16 ? timeVal + ':00' : timeVal,
       diaper_type: State.diaperType,
       notes: document.getElementById('d-notes').value || null,
+      poop_color: State.poopColor || null,
     });
     closeModal('modal-diaper');
     toast('👶 Luier geregistreerd!');
@@ -675,8 +701,7 @@ function renderWeightSection(items) {
       changeEl.innerHTML = `<span style="color:${color}">${sign} ${Math.abs(diff)}g</span> t.o.v. vorige meting`;
     }
 
-    // Pre-fill calculator
-    document.getElementById('calc-weight-input').value = latest.weight_g;
+    // Pre-fill schedule weight from latest measurement
     document.getElementById('sched-weight').value = latest.weight_g;
   } else {
     display.textContent = '—';
@@ -846,6 +871,14 @@ async function loadSettings() {
       document.getElementById('sched-result-preview').style.display = '';
     }
   } catch (e) { console.error('Schedule settings:', e); }
+
+  // Always override weight from latest actual measurement so it stays up-to-date
+  try {
+    const weights = await api.getWeights();
+    if (weights && weights.length) {
+      document.getElementById('sched-weight').value = weights[0].weight_g;
+    }
+  } catch (e) { /* no weights yet, keep stored value */ }
 
   // Update language buttons
   updateLangButtons();
@@ -1158,6 +1191,59 @@ function startAutoRefresh() {
 }
 
 /* ════════════════════════════════════════════
+   FIRST-TIME SETUP
+   ════════════════════════════════════════════ */
+function selectSetupGender(gender) {
+  State.setupGender = gender;
+  document.querySelectorAll('#modal-setup .type-option').forEach(b => {
+    b.classList.toggle('selected', b.dataset.gender === gender);
+  });
+}
+
+async function saveSetup() {
+  const name   = document.getElementById('setup-name').value.trim();
+  const birth  = document.getElementById('setup-birth').value;
+  const weight = parseInt(document.getElementById('setup-weight').value, 10);
+  const first  = document.getElementById('setup-first').value;
+  const last   = document.getElementById('setup-last').value;
+  const num    = parseInt(document.getElementById('setup-num').value, 10) || 6;
+  const buf    = parseInt(document.getElementById('setup-buf').value, 10) || 20;
+
+  if (!name) { toast('Vul een naam in', 'error'); return; }
+  if (!birth) { toast('Vul een geboortedatum in', 'error'); return; }
+
+  try {
+    // Save baby profile
+    const baby = await api.updateBaby({ name, birth_date: birth, gender: State.setupGender });
+    State.baby = baby;
+    updateHeader();
+
+    // Save weight measurement if given
+    if (weight && weight >= 500) {
+      await api.addWeight({ measured_at: new Date().toISOString().slice(0, 19), weight_g: weight, notes: 'Begingewicht' });
+    }
+
+    // Save schedule settings
+    await api.saveScheduleSettings({
+      weight_g: weight || null,
+      num_feedings: num,
+      first_feeding_time: first,
+      last_feeding_time: last,
+      burp_buffer_minutes: buf,
+      blocked_windows: [],
+    });
+
+    closeModal('modal-setup');
+    toast('👶 Welkom, ' + name + '! Alles is ingesteld.');
+
+    // Reload dashboard with the new data
+    await loadDashboard();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+/* ════════════════════════════════════════════
    INITIALIZATION
    ════════════════════════════════════════════ */
 async function init() {
@@ -1187,6 +1273,11 @@ async function init() {
     const baby = await api.getBaby();
     State.baby = baby;
     updateHeader();
+
+    // Show first-time setup if baby hasn't been configured yet
+    if (baby.name === 'Baby' && !baby.birth_date) {
+      openModal('modal-setup');
+    }
   } catch (e) { /* ignore */ }
 
   // Start clock
@@ -1227,6 +1318,7 @@ window.App = {
   selectDiaperType,
   saveDiaper,
   deleteDiaper,
+  selectPoopColor,
 
   // Weight
   openWeightModal,
@@ -1241,6 +1333,10 @@ window.App = {
   showBlockedModal,
   saveBlockedWindow,
   removeBlockedWindow,
+
+  // First-time setup
+  saveSetup,
+  selectSetupGender,
 
   // Sleep
   toggleSleep,

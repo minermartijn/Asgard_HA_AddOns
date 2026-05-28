@@ -46,6 +46,7 @@ class DiaperEntry(Base):
     changed_at = Column(DateTime, nullable=False)
     # wet, dirty, both, dry
     diaper_type = Column(String(20), nullable=False, default="wet")
+    poop_color = Column(String(20), nullable=True)  # hex color or None
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
 

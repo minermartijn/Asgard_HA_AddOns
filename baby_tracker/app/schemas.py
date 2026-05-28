@@ -63,6 +63,7 @@ class FeedingOut(FeedingCreate):
 class DiaperCreate(BaseModel):
     changed_at: Optional[datetime] = None
     diaper_type: str = "wet"
+    poop_color: Optional[str] = None
     notes: Optional[str] = None
 
 

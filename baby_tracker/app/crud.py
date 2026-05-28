@@ -131,6 +131,7 @@ def create_diaper(db: Session, data: schemas.DiaperCreate) -> models.DiaperEntry
         baby_id=1,
         changed_at=data.changed_at or datetime.now(),
         diaper_type=data.diaper_type or "wet",
+        poop_color=data.poop_color,
         notes=data.notes,
     )
     db.add(entry)
