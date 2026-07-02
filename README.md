@@ -10,6 +10,12 @@ A Model Context Protocol (MCP) server for Home Assistant that allows AI assistan
 ### [HA Full MCP Server](./ha_full_mcp)
 A comprehensive Model Context Protocol (MCP) server that enables AI assistants to manage and control your entire Home Assistant installation, including devices, entities, automations, backups, and system diagnostics.
 
+### [Home Stock](./home_stock)
+A beautiful, low-friction household stock & shopping tracker. Tap to adjust quantities, get an automatic shopping list, push it straight to Home Assistant's own to-do list, and expose stock sensors for your dashboards and automations.
+
+### [Baby Tracker](./baby_tracker)
+Track your baby's feedings, diapers, weight and growth with a friendly, mobile-first interface (Dutch & English).
+
 ## How to use this repository
 
 To add these addons to your Home Assistant instance:
