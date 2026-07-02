@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#14B8A6" />
+<title>Home Stock</title>
+<link rel="stylesheet" href="static/css/app.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="app-name-header" id="header-name" data-i18n="app_title">Voorraad</span>
+      <span class="app-sub-header" id="header-sub"></span>
+    </div>
+    <div class="header-right">
+      <span class="time-display" id="clock">--:--</span>
+      <button class="lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- ══════ STOCK ══════ -->
+    <section class="section active" id="sec-stock">
+      <h2 class="section-title"><span>🧺</span> <span data-i18n="stock_title">Voorraad</span></h2>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-card-value" id="stat-total">0</div><div class="stat-card-label" data-i18n="total_items">Producten</div></div>
+        <div class="stat-card warn"><div class="stat-card-value" id="stat-low">0</div><div class="stat-card-label" data-i18n="low_items">Bijna op</div></div>
+        <div class="stat-card bad"><div class="stat-card-value" id="stat-out">0</div><div class="stat-card-label" data-i18n="out_items">Op</div></div>
+      </div>
+
+      <div class="chip-row" id="cat-chips"></div>
+      <div id="stock-list"><div class="spinner"></div></div>
+    </section>
+
+    <!-- ══════ SHOPPING ══════ -->
+    <section class="section" id="sec-shopping">
+      <h2 class="section-title"><span>🛒</span> <span data-i18n="shopping_title">Boodschappen</span></h2>
+      <div id="shopping-list"><div class="spinner"></div></div>
+      <div class="sync-bar" id="sync-bar" style="display:none">
+        <button class="btn btn-primary" id="sync-btn" onclick="sendToHA()">
+          <span>📤</span> <span data-i18n="send_to_ha">Stuur naar HA lijst</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ══════ SETTINGS ══════ -->
+    <section class="section" id="sec-settings">
+      <h2 class="section-title"><span>⚙️</span> <span data-i18n="settings_title">Instellingen</span></h2>
+
+      <div class="card">
+        <div class="form-group">
+          <label class="form-label" data-i18n="household_name">Naam huishouden</label>
+          <input class="form-input" id="set-household" type="text" />
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" data-i18n="language">Taal</label>
+          <select class="form-input" id="set-language">
+            <option value="nl">Nederlands</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>🏠</span> <span data-i18n="ha_integration">Home Assistant</span></div>
+        <div id="ha-status"></div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="todo_list">Boodschappenlijst (to-do)</label>
+          <select class="form-input" id="set-todo"></select>
+          <div class="form-hint" data-i18n="todo_hint">Waar de boodschappenlijst naartoe wordt gestuurd</div>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label" data-i18n="auto_sync">Automatisch synchroniseren</div></div>
+          <label class="switch"><input type="checkbox" id="set-autosync" /><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label" data-i18n="expose_sensors">Sensoren tonen in HA</div><div class="setting-desc" data-i18n="sensors_hint">Maakt sensor.home_stock_* aan</div></div>
+          <label class="switch"><input type="checkbox" id="set-sensors" /><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveSettings()" data-i18n="save">Opslaan</button>
+    </section>
+  </main>
+
+  <!-- FAB -->
+  <button class="fab" id="fab" onclick="openCatalog()">+</button>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-stock" onclick="showSection('stock')">
+      <span class="nav-icon">🧺</span><span class="nav-label" data-i18n="nav_stock">Voorraad</span>
+    </button>
+    <button class="nav-btn" id="nav-shopping" onclick="showSection('shopping')">
+      <span class="nav-icon">🛒</span><span class="nav-label" data-i18n="nav_shopping">Boodschappen</span>
+      <span class="nav-badge hidden" id="shopping-badge">0</span>
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="showSection('settings')">
+      <span class="nav-icon">⚙️</span><span class="nav-label" data-i18n="nav_settings">Instellingen</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ══════ Catalog modal ══════ -->
+<div class="modal-overlay" id="modal-catalog">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-titlebar">
+      <div class="modal-title"><span>➕</span> <span data-i18n="add_title">Product toevoegen</span></div>
+      <button class="modal-close" onclick="closeModal('modal-catalog')" aria-label="Sluiten">✕</button>
+    </div>
+    <div class="form-group">
+      <input class="form-input" id="catalog-search" type="text" data-i18n-placeholder="search" oninput="renderCatalog()" />
+    </div>
+    <button class="btn btn-secondary" style="margin-bottom:16px" onclick="openCustom()">
+      <span>✏️</span> <span data-i18n="custom_add">Zelf toevoegen</span>
+    </button>
+    <div id="catalog-grid"></div>
+  </div>
+</div>
+
+<!-- ══════ Custom add / edit modal ══════ -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-titlebar">
+      <div class="modal-title"><span id="edit-icon">✏️</span> <span id="edit-title" data-i18n="custom_item">Eigen product</span></div>
+      <button class="modal-close" onclick="closeModal('modal-edit')" aria-label="Sluiten">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 84px">
+        <label class="form-label" data-i18n="item_emoji">Emoji</label>
+        <input class="form-input emoji-input" id="edit-emoji" type="text" maxlength="4" value="📦" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="item_name">Naam</label>
+        <input class="form-input" id="edit-name" type="text" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="item_category">Categorie</label>
+      <select class="form-input" id="edit-category"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="item_threshold">Waarschuw bij (of minder)</label>
+      <input class="form-input" id="edit-threshold" type="number" min="0" value="1" />
+    </div>
+    <button class="btn btn-primary" onclick="saveEdit()" data-i18n="save">Opslaan</button>
+    <button class="btn btn-danger" id="edit-delete" style="margin-top:10px;display:none" onclick="deleteEditItem()" data-i18n="delete">Verwijderen</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="static/js/i18n.js"></script>
+<script src="static/js/catalog.js"></script>
+<script src="static/js/app.js"></script>
+</body>
+</html>
