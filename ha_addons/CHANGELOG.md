@@ -2,6 +2,13 @@
 
 All notable changes to HA Addon MCP Server will be documented in this file.
 
+## [1.3.2] - 2026-11-04
+
+### Changed
+- Replaced deprecated `config` and `addons` mappings with `homeassistant_config` and `local_apps`, preserving the existing `/config` and `/addons` container paths.
+- Removed deprecated 32-bit architectures (`armhf`, `armv7`, and `i386`); supported architectures are now `aarch64` and `amd64`.
+- Migrated legacy builder metadata into the Dockerfile using the multi-platform Home Assistant base image, pinned to Alpine 3.21.
+
 ## [1.3.1] - 2026-11-04
 
 ### Fixed
