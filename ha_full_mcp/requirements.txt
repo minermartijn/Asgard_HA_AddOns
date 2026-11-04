@@ -1,5 +1,5 @@
-# MCP Server - use latest with all features including SSE transport
-mcp[cli]>=1.0.0
+# MCP Server - use latest with all features including SSE and Streamable HTTP transports
+mcp[cli]>=1.3.0
 
 # HTTP Server
 uvicorn>=0.30.0

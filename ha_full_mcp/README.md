@@ -1,6 +1,6 @@
 # Home Assistant MCP Server
 
-[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/yourusername/ha-full-mcp-server)
+[![Version](https://img.shields.io/badge/version-1.10.0-blue.svg)](https://github.com/yourusername/ha-full-mcp-server)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Compatible-green.svg)](https://www.home-assistant.io/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-orange.svg)](https://modelcontextprotocol.io/)
 
@@ -105,7 +105,51 @@ Every tool can be individually enabled or disabled in the addon configuration UI
 
 ## Connecting AI Assistants
 
-### Kiro
+The addon concurrently supports both **Streamable HTTP** (recommended for modern MCP clients) and **SSE (Server-Sent Events)** transports.
+
+### Streamable HTTP (Recommended)
+
+Modern MCP clients (e.g. Cursor, Kiro, Claude Desktop) connect to the single-endpoint Streamable HTTP interface:
+
+- **Endpoint**: `http://YOUR-HA-IP:8010/mcp`
+- **Path-based key (for Cloudflare Tunnels/proxies)**: `http://YOUR-HA-IP:8010/mcp/YOUR-API-KEY`
+
+#### Cursor / MCP Settings (`mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "home-assistant": {
+      "url": "http://YOUR-HA-IP:8010/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR-API-KEY"
+      }
+    }
+  }
+}
+```
+
+Or when behind Cloudflare Tunnel (where custom headers cannot be injected):
+
+```json
+{
+  "mcpServers": {
+    "home-assistant": {
+      "url": "https://mcp.yourdomain.com/mcp/YOUR-API-KEY"
+    }
+  }
+}
+```
+
+### SSE (Server-Sent Events)
+
+For clients using the legacy SSE transport:
+
+- **SSE Endpoint**: `http://YOUR-HA-IP:8010/sse?api_key=YOUR-API-KEY`
+- **Path-based SSE Endpoint**: `http://YOUR-HA-IP:8010/sse/YOUR-API-KEY`
+- **Messages Endpoint**: `http://YOUR-HA-IP:8010/messages` (or `/messages/YOUR-API-KEY`)
+
+#### Kiro (SSE)
 
 Add to your `.kiro/settings/mcp.json`:
 
@@ -122,20 +166,20 @@ Add to your `.kiro/settings/mcp.json`:
 
 ### Claude Desktop
 
-Claude Desktop supports remote MCP servers with OAuth:
+Claude Desktop supports remote MCP servers with OAuth or Streamable HTTP/SSE:
 
 1. Open Claude Desktop → Settings → Connectors
 2. Click "Add Custom Connector"
-3. Enter your Home Assistant URL: `http://YOUR-HA-IP:8010`
-4. Follow the OAuth flow to authorize
+3. Enter your Home Assistant URL: `http://YOUR-HA-IP:8010/mcp`
+4. Follow instructions or authorize using your API key
 
 ### Other MCP Clients
 
-Any MCP-compatible client can connect using the SSE transport:
+Any MCP-compatible client can connect using either transport:
 
-- **URL**: `http://YOUR-HA-IP:8010/sse?api_key=YOUR-API-KEY`
-- **Transport**: SSE (Server-Sent Events)
-- **Authentication**: API key in URL parameter
+- **Streamable HTTP**: `http://YOUR-HA-IP:8010/mcp` (Header `Authorization: Bearer <key>` or `X-API-Key: <key>`)
+- **Streamable HTTP (Path)**: `http://YOUR-HA-IP:8010/mcp/<key>`
+- **SSE**: `http://YOUR-HA-IP:8010/sse?api_key=<key>` (or `/sse/<key>`)
 
 ## Usage Examples
 
@@ -294,7 +338,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ---
 
-**Version**: 1.8.0  
+**Version**: 1.10.0  
 **Status**: Production Ready  
 **Tested**: Home Assistant 2024.x and later
 

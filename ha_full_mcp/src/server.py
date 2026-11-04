@@ -40,8 +40,13 @@ logger = logging.getLogger(__name__)
 
 
 async def run_sse_server(config, ha_client):
-    """Run the server with SSE transport."""
+    """Run the server with SSE and Streamable HTTP transports."""
+    from contextlib import asynccontextmanager
     from mcp.server.sse import SseServerTransport
+    try:
+        from mcp.server.streamable_http import StreamableHTTPSessionManager
+    except ImportError:
+        from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from starlette.applications import Starlette
     from starlette.routing import Route
     from starlette.middleware.cors import CORSMiddleware
@@ -52,9 +57,11 @@ async def run_sse_server(config, ha_client):
         create_sse_handler_with_path_key,
         create_messages_handler,
         create_messages_handler_with_path_key,
+        create_streamable_http_handler,
+        create_streamable_http_handler_with_path_key,
     )
     
-    logger.info("Using SSE (Server-Sent Events) transport")
+    logger.info("Using HTTP transport (SSE & Streamable HTTP)")
     
     # Create MCP server
     server = Server(config.server_name)
@@ -68,6 +75,9 @@ async def run_sse_server(config, ha_client):
     # Create SSE transport with API key in path (Cloudflare-compatible)
     sse = SseServerTransport(f"/messages/{config.api_key}")
     
+    # Create Streamable HTTP session manager
+    session_manager = StreamableHTTPSessionManager(server)
+    
     # Create route handlers
     handle_sse = create_sse_handler(
         sse, server, config.api_key, config.server_name, config.server_version
@@ -77,14 +87,29 @@ async def run_sse_server(config, ha_client):
     )
     handle_messages = create_messages_handler(sse, config.api_key)
     handle_messages_with_key = create_messages_handler_with_path_key(sse, config.api_key)
+
+    handle_streamable_http = create_streamable_http_handler(
+        session_manager, config.api_key
+    )
+    handle_streamable_http_with_key = create_streamable_http_handler_with_path_key(
+        session_manager, config.api_key
+    )
+
+    @asynccontextmanager
+    async def lifespan(app: Starlette):
+        async with session_manager.run():
+            yield
     
     # Create Starlette app with all routes
     app = Starlette(
+        lifespan=lifespan,
         routes=[
             Route("/sse", handle_sse, methods=["GET"]),
             Route("/messages", handle_messages, methods=["POST"]),
             Route("/sse/{api_key}", handle_sse_with_key, methods=["GET"]),
             Route("/messages/{api_key}", handle_messages_with_key, methods=["POST"]),
+            Route("/mcp", handle_streamable_http, methods=["GET", "POST", "DELETE"]),
+            Route("/mcp/{api_key}", handle_streamable_http_with_key, methods=["GET", "POST", "DELETE"]),
         ]
     )
     
@@ -103,8 +128,9 @@ async def run_sse_server(config, ha_client):
         allow_headers=["*"],
     )
     
-    logger.info(f"Starting SSE server on {config.host}:{config.port}")
+    logger.info(f"Starting HTTP server on {config.host}:{config.port}")
     logger.info(f"MCP SSE endpoint: http://{config.host}:{config.port}/sse")
+    logger.info(f"MCP Streamable HTTP endpoint: http://{config.host}:{config.port}/mcp")
     
     # Get tool count
     tools = await create_list_tools_handler(ha_client)()
@@ -119,6 +145,9 @@ async def run_sse_server(config, ha_client):
     )
     server_instance = uvicorn.Server(uvicorn_config)
     await server_instance.serve()
+
+
+run_http_server = run_sse_server
 
 
 async def run_stdio_server(config, ha_client):
@@ -160,10 +189,10 @@ async def main():
     logger.info("Starting Home Assistant MCP Server")
     
     # Run appropriate transport
-    if config.transport_type == "sse":
-        await run_sse_server(config, ha_client)
-    else:
+    if config.transport_type == "stdio":
         await run_stdio_server(config, ha_client)
+    else:
+        await run_http_server(config, ha_client)
 
 
 if __name__ == "__main__":

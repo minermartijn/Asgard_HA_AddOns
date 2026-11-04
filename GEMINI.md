@@ -22,8 +22,20 @@ This workspace is a dedicated Home Assistant Addon Repository containing multipl
 
 ### 2. HA Full MCP Server (`ha_full_mcp/`)
 - **Name**: HA Full MCP Server
-- **Version**: 1.8.0
-- **Purpose**: Comprehensive MCP server for full Home Assistant control (entities, automations, backups, etc.).
+- **Version**: 1.10.0
+- **Purpose**: Comprehensive MCP server for full Home Assistant control (entities, automations, backups, etc.) supporting both SSE and Streamable HTTP transports.
+- **Status**: Stable / Production Ready.
+
+### 3. Baby Tracker (`baby_tracker/`)
+- **Name**: Baby Tracker
+- **Version**: 1.0.5
+- **Purpose**: Track feedings, diapers, sleep, weight and growth with a mobile-first interface.
+- **Status**: Stable / Production Ready.
+
+### 4. Home Stock (`home_stock/`)
+- **Name**: Home Stock
+- **Version**: 1.0.0
+- **Purpose**: Household stock & shopping tracker with HA to-do list sync and sensors.
 - **Status**: Stable / Production Ready.
 
 ## Repository Information
