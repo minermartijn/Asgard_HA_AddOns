@@ -15,7 +15,7 @@ All notable changes to HA Full MCP Server will be documented in this file.
   - Updated server startup logging to display both SSE and Streamable HTTP endpoints
 
 ### Changed
-- Upgraded `mcp[cli]` dependency to `>=1.3.0` in `requirements.txt`
+- Upgraded `mcp[cli]` dependency to `>=1.30.0,<2` in `requirements.txt`
 - Bumped internal server version constant to `1.10.0`
 
 ## [1.9.0] - 2026-05-28
