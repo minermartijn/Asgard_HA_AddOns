@@ -2,6 +2,19 @@
 
 All notable changes to HA Full MCP Server will be documented in this file.
 
+## [1.10.2] - 2026-11-04
+
+### Added
+- **Health Check Endpoint**: Added unauthenticated `GET /health` endpoint returning server status, version, transport mode, and enabled tools count
+- **Streamable HTTP Session Management**: Configured 30-minute session idle timeout and max session limits to prevent memory leaks
+- **Dockerignore**: Added `.dockerignore` to streamline container builds
+
+### Fixed
+- **Tool Toggle Support**: Configuration loader now reads `/data/options.json` directly with nested section mapping, making all 59 tool UI toggles in Home Assistant functional
+- **Schema Typo**: Fixed `list_backons` typo to `list_backups` in `config.yaml` schema
+- **Repository URLs**: Corrected repository URLs in `config.yaml` and `README.md` to `minermartijn/Asgard_HA_AddOns`
+- **Auth Robustness**: Added whitespace stripping and case-insensitive `Bearer` prefix parsing for API key headers
+
 ## [1.10.1] - 2026-11-04
 
 ### Fixed

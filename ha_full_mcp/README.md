@@ -1,6 +1,6 @@
 # Home Assistant MCP Server
 
-[![Version](https://img.shields.io/badge/version-1.10.1-blue.svg)](https://github.com/yourusername/ha-full-mcp-server)
+[![Version](https://img.shields.io/badge/version-1.10.2-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Compatible-green.svg)](https://www.home-assistant.io/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-orange.svg)](https://modelcontextprotocol.io/)
 
@@ -53,7 +53,7 @@ Read and write configuration files, validate configuration before restarting, vi
 Add this repository to your Home Assistant addon store:
 
 ```
-https://github.com/yourusername/ha-full-mcp-server
+https://github.com/minermartijn/Asgard_HA_AddOns
 ```
 
 ### 2. Install the Addon
@@ -180,6 +180,7 @@ Any MCP-compatible client can connect using either transport:
 - **Streamable HTTP**: `http://YOUR-HA-IP:8010/mcp` (Header `Authorization: Bearer <key>` or `X-API-Key: <key>`)
 - **Streamable HTTP (Path)**: `http://YOUR-HA-IP:8010/mcp/<key>`
 - **SSE**: `http://YOUR-HA-IP:8010/sse?api_key=<key>` (or `/sse/<key>`)
+- **Health Check**: `http://YOUR-HA-IP:8010/health` (Unauthenticated, returns JSON status)
 
 ## Usage Examples
 
@@ -338,7 +339,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ---
 
-**Version**: 1.10.1  
+**Version**: 1.10.2  
 **Status**: Production Ready  
 **Tested**: Home Assistant 2024.x and later
 

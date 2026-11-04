@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.git/
+.gitignore
+.DS_Store
+*.swp
+*.swo
+CLAUDE.md
+data/
+*.db
