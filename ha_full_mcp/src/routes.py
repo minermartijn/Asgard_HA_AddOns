@@ -1,5 +1,5 @@
 """
-Route handlers for Home Assistant MCP Server SSE transport.
+Route handlers for Home Assistant MCP Server SSE and Streamable HTTP transports.
 """
 
 import logging
@@ -9,6 +9,11 @@ from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions
 from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http import StreamableHTTPServerTransport
+try:
+    from mcp.server.streamable_http import StreamableHTTPSessionManager
+except ImportError:
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from auth import verify_api_key, verify_path_api_key
 
@@ -202,3 +207,75 @@ def create_messages_handler_with_path_key(sse: SseServerTransport, api_key: str)
         return AlreadySentResponse()
     
     return handle_messages_with_key
+
+
+def create_streamable_http_handler(
+    session_manager: StreamableHTTPSessionManager,
+    api_key: str,
+):
+    """
+    Create Streamable HTTP connection handler with query/header authentication.
+    
+    Args:
+        session_manager: Streamable HTTP session manager instance
+        api_key: Expected API key
+        
+    Returns:
+        Async handler function
+    """
+    async def handle_streamable_http(request: Request):
+        """Handle Streamable HTTP requests (POST, GET, DELETE) with header/query auth"""
+        # Verify API key
+        if not verify_api_key(request, api_key):
+            client_host = request.client.host if request.client else "unknown"
+            logger.warning(f"Unauthorized Streamable HTTP request attempt from {client_host}")
+            return JSONResponse(
+                {"error": "Unauthorized - Invalid or missing API key"},
+                status_code=401,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Handle request via session manager (sends response directly via ASGI)
+        await session_manager.handle_request(request.scope, request.receive, request._send)
+        
+        # Return AlreadySentResponse to satisfy Starlette routing
+        return AlreadySentResponse()
+    
+    return handle_streamable_http
+
+
+def create_streamable_http_handler_with_path_key(
+    session_manager: StreamableHTTPSessionManager,
+    api_key: str,
+):
+    """
+    Create Streamable HTTP connection handler with path-based authentication.
+    
+    This is the recommended handler for Cloudflare deployments.
+    
+    Args:
+        session_manager: Streamable HTTP session manager instance
+        api_key: Expected API key
+        
+    Returns:
+        Async handler function
+    """
+    async def handle_streamable_http_with_key(request: Request):
+        """Handle Streamable HTTP requests with API key in path"""
+        # Verify API key from path parameter
+        if not verify_path_api_key(request, api_key):
+            client_host = request.client.host if request.client else "unknown"
+            logger.warning(f"Unauthorized Streamable HTTP request attempt from {client_host}")
+            return JSONResponse(
+                {"error": "Unauthorized - Invalid or missing API key"},
+                status_code=401,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Handle request via session manager (sends response directly via ASGI)
+        await session_manager.handle_request(request.scope, request.receive, request._send)
+        
+        # Return AlreadySentResponse to satisfy Starlette routing
+        return AlreadySentResponse()
+    
+    return handle_streamable_http_with_key

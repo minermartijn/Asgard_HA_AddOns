@@ -20,7 +20,7 @@ class ServerConfig:
     port: int
     enabled_tools: list[str]
     server_name: str = "home-assistant-mcp"
-    server_version: str = "1.8.0"
+    server_version: str = "1.10.0"
 
 
 def generate_api_key() -> str:
@@ -33,7 +33,15 @@ def load_config() -> ServerConfig:
     # Get configuration from environment
     ha_token = os.environ.get("HA_TOKEN")
     api_key = os.environ.get("API_KEY", "").strip()
-    transport_type = os.environ.get("TRANSPORT", "sse").lower()
+    raw_transport = os.environ.get("TRANSPORT", "sse").lower().strip()
+    if raw_transport in ("streamable-http", "streamable_http", "streamablehttp"):
+        transport_type = "streamable-http"
+    elif raw_transport == "stdio":
+        transport_type = "stdio"
+    elif raw_transport in ("all", "both"):
+        transport_type = "all"
+    else:
+        transport_type = "sse"
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8010"))
     

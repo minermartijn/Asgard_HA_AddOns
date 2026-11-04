@@ -2,6 +2,27 @@
 
 All notable changes to HA Full MCP Server will be documented in this file.
 
+## [1.10.0] - 2026-11-04
+
+### Added
+- **Streamable HTTP Transport Support (`/mcp`)**:
+  - Implemented MCP Streamable HTTP transport concurrent with existing SSE transport
+  - Standard header-authenticated endpoint: `/mcp` (Bearer token, `X-API-Key`, or `?api_key=`)
+  - Path-based key endpoint: `/mcp/{api_key}` for Cloudflare Tunnels and reverse proxies where custom headers cannot be set
+  - Full backward compatibility with Server-Sent Events (SSE) clients on `/sse` and `/messages`
+- **Transport Configuration**:
+  - Added support for `streamable-http` and `all` transport options in `config.yaml` schema (`list(sse|stdio|streamable-http|all)?`)
+  - Updated server startup logging to display both SSE and Streamable HTTP endpoints
+
+### Changed
+- Upgraded `mcp[cli]` dependency to `>=1.3.0` in `requirements.txt`
+- Bumped internal server version constant to `1.10.0`
+
+## [1.9.0] - 2026-05-28
+
+### Fixed
+- Fixed MCP tool validation by declaring `'items: {type: object}'` for array parameters in `automation_tools.py` and `dashboard_tools.py`
+
 ## [1.8.0] - 2026-02-19
 
 ### Changed
