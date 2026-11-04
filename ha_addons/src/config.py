@@ -20,7 +20,7 @@ class ServerConfig:
     host: str
     port: int
     server_name: str = "ha-addon-mcp-server"
-    server_version: str = "1.3.0"
+    server_version: str = "1.3.1"
 
 
 def generate_api_key() -> str:

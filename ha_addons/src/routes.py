@@ -2,7 +2,9 @@
 Route handlers for HA Addon MCP Server SSE and Streamable HTTP transports.
 """
 
+import asyncio
 import logging
+import anyio
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from mcp.server import Server
@@ -66,24 +68,31 @@ def create_sse_handler(
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        async with sse.connect_sse(
-            request.scope,
-            request.receive,
-            request._send
-        ) as (read_stream, write_stream):
-            init_options = InitializationOptions(
-                server_name=server_name,
-                server_version=server_version,
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
-                ),
-            )
-            await server.run(
-                read_stream,
-                write_stream,
-                init_options,
-            )
+        try:
+            async with sse.connect_sse(
+                request.scope,
+                request.receive,
+                request._send
+            ) as (read_stream, write_stream):
+                init_options = InitializationOptions(
+                    server_name=server_name,
+                    server_version=server_version,
+                    capabilities=server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={},
+                    ),
+                )
+                await server.run(
+                    read_stream,
+                    write_stream,
+                    init_options,
+                )
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            logger.info("SSE client disconnected")
+        except Exception as e:
+            logger.error(f"Error in SSE connection: {e}")
+        
+        return AlreadySentResponse()
     
     return handle_sse
 
@@ -120,24 +129,31 @@ def create_sse_handler_with_path_key(
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        async with sse.connect_sse(
-            request.scope,
-            request.receive,
-            request._send
-        ) as (read_stream, write_stream):
-            init_options = InitializationOptions(
-                server_name=server_name,
-                server_version=server_version,
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
-                ),
-            )
-            await server.run(
-                read_stream,
-                write_stream,
-                init_options,
-            )
+        try:
+            async with sse.connect_sse(
+                request.scope,
+                request.receive,
+                request._send
+            ) as (read_stream, write_stream):
+                init_options = InitializationOptions(
+                    server_name=server_name,
+                    server_version=server_version,
+                    capabilities=server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={},
+                    ),
+                )
+                await server.run(
+                    read_stream,
+                    write_stream,
+                    init_options,
+                )
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            logger.info("SSE client disconnected")
+        except Exception as e:
+            logger.error(f"Error in SSE connection: {e}")
+        
+        return AlreadySentResponse()
     
     return handle_sse_with_key
 
@@ -166,8 +182,13 @@ def create_messages_handler(sse: SseServerTransport, api_key: str):
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        # Handle the message - this function sends response directly via ASGI
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        try:
+            # Handle the message - this function sends response directly via ASGI
+            await sse.handle_post_message(request.scope, request.receive, request._send)
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            logger.warning("SSE post message was cancelled by client")
+        except Exception as e:
+            logger.error(f"Error handling SSE message: {e}")
         
         # Return AlreadySentResponse to satisfy Starlette routing
         # (actual response was already sent above)
@@ -199,8 +220,13 @@ def create_messages_handler_with_path_key(sse: SseServerTransport, api_key: str)
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        # Handle the message - this function sends response directly via ASGI
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        try:
+            # Handle the message - this function sends response directly via ASGI
+            await sse.handle_post_message(request.scope, request.receive, request._send)
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            logger.warning("SSE post message was cancelled by client")
+        except Exception as e:
+            logger.error(f"Error handling SSE message: {e}")
         
         # Return AlreadySentResponse to satisfy Starlette routing
         # (actual response was already sent above)
@@ -234,7 +260,12 @@ def create_streamable_http_handler(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        await session_manager.handle_request(request.scope, request.receive, request._send)
+        try:
+            await session_manager.handle_request(request.scope, request.receive, request._send)
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            logger.warning("Streamable HTTP request was cancelled by client")
+        except Exception as e:
+            logger.error(f"Error handling Streamable HTTP request: {e}")
         return AlreadySentResponse()
     
     return handle_streamable_http
@@ -267,7 +298,12 @@ def create_streamable_http_handler_with_path_key(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        await session_manager.handle_request(request.scope, request.receive, request._send)
+        try:
+            await session_manager.handle_request(request.scope, request.receive, request._send)
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            logger.warning("Streamable HTTP request was cancelled by client")
+        except Exception as e:
+            logger.error(f"Error handling Streamable HTTP request: {e}")
         return AlreadySentResponse()
     
     return handle_streamable_http_with_key

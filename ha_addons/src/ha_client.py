@@ -1,5 +1,7 @@
 """Home Assistant API Client for MCP Server."""
 import os
+import time
+import asyncio
 import logging
 from typing import Any
 import aiohttp
@@ -30,6 +32,11 @@ class HomeAssistantClient:
         self.ha_url = "http://supervisor/core"
         self.hassio_url = "http://supervisor"
         
+        # Background store reload tracking
+        self._reload_task: asyncio.Task | None = None
+        self._reload_start_time: float | None = None
+        self._reload_last_status: dict[str, Any] | None = None
+
         logger.info(f"HomeAssistantClient initialized:")
         logger.info(f"  - Supervisor token: {'SET' if self.supervisor_token else 'NOT SET'}")
         logger.info(f"  - HA Core token: {'SET' if self.ha_token else 'NOT SET'}")
@@ -55,10 +62,11 @@ class HomeAssistantClient:
             use_ha_token: If True, use HA Core token instead of Supervisor token
         """
         headers = self._get_headers(use_ha_token)
+        timeout = kwargs.pop("timeout", aiohttp.ClientTimeout(total=30, connect=10))
         
         try:
             logger.debug(f"Making {method} request to {url}")
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.request(
                     method, url, headers=headers, **kwargs
                 ) as response:
@@ -600,43 +608,122 @@ class HomeAssistantClient:
             logger.error(f"Failed to list store addons: {e}")
             raise
     
-    async def reload_addons(self) -> dict[str, Any]:
-        """Reload the addon list to refresh available addons.
-        
-        This is useful after adding a new repository or when the addon list
-        needs to be refreshed without restarting Home Assistant.
-        
-        Returns:
-            Dictionary containing the result of the reload operation
-            
-        Raises:
-            PermissionError: If insufficient permissions to reload addons
-            aiohttp.ClientError: If API request fails
-        """
+    async def _do_reload_addons(self) -> dict[str, Any]:
+        """Perform the actual supervisor addon reload request."""
         try:
+            logger.info("Sending reload request to Home Assistant Supervisor...")
             result = await self._make_request(
                 "POST",
                 f"{self.hassio_url}/addons/reload",
-                use_ha_token=False
+                use_ha_token=False,
+                timeout=aiohttp.ClientTimeout(total=180, connect=10)
             )
-            
-            logger.info("Addon list reloaded successfully")
-            
-            return {
+            logger.info("Addon list reloaded successfully by Supervisor")
+            status_data = {
+                "status": "completed",
                 "result": result.get("result", "ok"),
                 "message": "Addon list reloaded successfully"
             }
-            
+            self._reload_last_status = status_data
+            return status_data
         except aiohttp.ClientResponseError as e:
             if e.status == 403:
                 logger.error("Permission denied to reload addons")
+                err_data = {
+                    "status": "error",
+                    "error": "Insufficient permissions to reload addons",
+                    "message": "Permission denied"
+                }
+                self._reload_last_status = err_data
                 raise PermissionError("Insufficient permissions to reload addons") from e
             else:
                 logger.error(f"Failed to reload addons: HTTP {e.status}")
+                err_data = {
+                    "status": "error",
+                    "error": f"HTTP {e.status}",
+                    "message": f"Failed to reload addons: HTTP {e.status}"
+                }
+                self._reload_last_status = err_data
                 raise
-        except aiohttp.ClientError as e:
-            logger.error(f"Failed to reload addons: {e}")
+        except Exception as e:
+            logger.error(f"Addon reload failed: {e}")
+            err_data = {
+                "status": "error",
+                "error": str(e),
+                "message": f"Supervisor reload failed: {e}"
+            }
+            self._reload_last_status = err_data
             raise
+        finally:
+            self._reload_task = None
+
+    async def get_reload_status(self) -> dict[str, Any]:
+        """Get status of the current or most recent addon reload."""
+        if self._reload_task and not self._reload_task.done():
+            elapsed = time.time() - (self._reload_start_time or time.time())
+            return {
+                "status": "in_progress",
+                "elapsed_seconds": round(elapsed, 1),
+                "message": f"Addon store refresh is running in the background ({round(elapsed, 1)}s elapsed)"
+            }
+        if self._reload_last_status:
+            return self._reload_last_status
+        return {
+            "status": "idle",
+            "message": "No addon reload in progress or recorded"
+        }
+
+    async def reload_addons(self, wait_seconds: float = 8.0) -> dict[str, Any]:
+        """Reload the addon list to refresh available addons.
+        
+        This refreshes git repositories and add-on catalogs in Home Assistant Supervisor.
+        To prevent client-side MCP timeouts during long-running git operations,
+        if the operation takes longer than wait_seconds, it continues running as a
+        background task and returns an in_progress status.
+        
+        Args:
+            wait_seconds: Maximum time in seconds to wait synchronously before
+                          returning with an in_progress response. Default is 8.0s.
+        
+        Returns:
+            Dictionary containing the reload status ('completed' or 'in_progress')
+        """
+        # If an existing reload task is currently running
+        if self._reload_task and not self._reload_task.done():
+            elapsed = round(time.time() - (self._reload_start_time or time.time()), 1)
+            logger.info(f"Addon reload is already in progress ({elapsed}s elapsed)")
+            if wait_seconds > 0:
+                try:
+                    return await asyncio.wait_for(asyncio.shield(self._reload_task), timeout=wait_seconds)
+                except asyncio.TimeoutError:
+                    pass
+            return {
+                "status": "in_progress",
+                "elapsed_seconds": round(time.time() - (self._reload_start_time or time.time()), 1),
+                "message": "Addon store reload is already running in the background"
+            }
+        
+        # Start new reload task
+        self._reload_start_time = time.time()
+        self._reload_task = asyncio.create_task(self._do_reload_addons())
+        
+        if wait_seconds > 0:
+            try:
+                return await asyncio.wait_for(asyncio.shield(self._reload_task), timeout=wait_seconds)
+            except asyncio.TimeoutError:
+                elapsed = round(time.time() - self._reload_start_time, 1)
+                logger.info(f"Addon reload still running after {elapsed}s; returning non-blocking response")
+                return {
+                    "status": "in_progress",
+                    "elapsed_seconds": elapsed,
+                    "message": "Add-on store refresh initiated in background. Git repositories are being updated."
+                }
+        else:
+            return {
+                "status": "in_progress",
+                "elapsed_seconds": 0.0,
+                "message": "Add-on store refresh initiated in background."
+            }
     
     async def check_addon_availability(self, addon_slug: str) -> dict[str, Any]:
         """Check if an addon is available for installation on this system.
