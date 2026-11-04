@@ -1,6 +1,6 @@
 # Home Assistant MCP Server
 
-[![Version](https://img.shields.io/badge/version-1.10.0-blue.svg)](https://github.com/yourusername/ha-full-mcp-server)
+[![Version](https://img.shields.io/badge/version-1.10.1-blue.svg)](https://github.com/yourusername/ha-full-mcp-server)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Compatible-green.svg)](https://www.home-assistant.io/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-orange.svg)](https://modelcontextprotocol.io/)
 
@@ -338,7 +338,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ---
 
-**Version**: 1.10.0  
+**Version**: 1.10.1  
 **Status**: Production Ready  
 **Tested**: Home Assistant 2024.x and later
 
