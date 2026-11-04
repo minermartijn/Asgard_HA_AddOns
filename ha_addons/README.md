@@ -1,45 +1,84 @@
-# Home Assistant MCP Server
+# HA Addon MCP Server (Lifeboat)
 
-Control your Home Assistant addons from AI assistants like Claude, Kiro, or any MCP-compatible tool.
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Compatible-green.svg)](https://www.home-assistant.io/)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-orange.svg)](https://modelcontextprotocol.io/)
 
-## What is this?
+A lightweight Model Context Protocol (MCP) server dedicated exclusively to Home Assistant add-on lifecycle management, logs, and emergency recovery.
 
-Ever wanted to ask Claude "hey, restart my Node-RED addon" or tell Kiro "install the ESPHome addon for me"? That's exactly what this does.
+## Why a Dedicated Add-on Manager (The "Lifeboat" Pattern)?
 
-This addon turns your Home Assistant into an MCP server, which means AI assistants can talk to it directly. No more switching between your chat and the Home Assistant UI to manage addons - just ask your AI assistant to do it.
+If you use a comprehensive MCP server like **HA Full MCP Server** (port 8010) to manage your smart home, updating or troubleshooting that add-on itself creates a catch-22:
+- If the AI assistant triggers an update of `ha_full_mcp` and the container goes down, rebuilds, or fails to start, the AI loses its entire connection to Home Assistant.
+- The AI cannot inspect why the update broke or restart the container.
 
-## What can it do?
+**HA Addon MCP Server** solves this by running independently on **port 8015**. It focuses purely on add-on operations:
+- Checking add-on logs and supervisor logs
+- Starting, stopping, restarting, and rebuilding add-ons
+- Updating add-on configurations
+- Rebuilding or restarting `ha_full_mcp` if an update fails
 
-Pretty much everything you'd do with addons in the Home Assistant UI:
+Because it relies solely on Home Assistant's internal Supervisor API (`SUPERVISOR_TOKEN`), it continues functioning even if other components or Core tokens are unavailable.
 
-- Install and uninstall addons from the store
-- Start, stop, and restart addons
-- Update addons to the latest version
-- Change addon settings
-- Check logs when something breaks
-- Browse the addon store
-- Even restart Home Assistant itself
+## What can it do? (18 Tools)
 
-It's like having a really smart assistant who knows their way around your Home Assistant setup.
+- **Monitor & Inspect**: `list_addons`, `get_addon_info`, `get_addon_logs`, `get_supervisor_logs`
+- **Control**: `start_addon`, `stop_addon`, `restart_addon`
+- **Maintain & Repair**: `update_addon`, `rebuild_addon`, `install_addon`, `uninstall_addon`
+- **Configure**: `get_addon_configuration`, `set_addon_configuration`, `validate_addon_configuration`
+- **Catalog**: `list_store_addons`, `reload_addons`, `check_addon_availability`
+- **System**: `restart_homeassistant`
 
-## Installation
+## Connecting AI Assistants
 
-1. Add this repository to your Home Assistant addon store
-2. Find "HA Addon MCP Server" and click Install
-3. Go to the Configuration tab and set your API key (or let it generate one)
-4. Start the addon
-5. Check the logs for your API key if you didn't set one
+The add-on supports both modern **Streamable HTTP** (`/mcp`) and legacy **SSE** (`/sse`) transports concurrently on port **8015**.
 
-That's it. Now you just need to connect your AI assistant to it.
+### Streamable HTTP (Recommended)
 
-## Quick Setup for Kiro
+Modern MCP clients (Cursor, Claude Desktop, Kiro) connect to:
 
-Add this to your Kiro MCP settings (`.kiro/settings/mcp.json`):
+- **Endpoint**: `http://YOUR-HA-IP:8015/mcp`
+- **Path-based key (for Cloudflare Tunnels/proxies)**: `http://YOUR-HA-IP:8015/mcp/YOUR-API-KEY`
+- **Health Check**: `http://YOUR-HA-IP:8015/health`
+
+#### Configuration (`mcp.json`)
 
 ```json
 {
   "mcpServers": {
-    "home-assistant": {
+    "ha-addons-lifeboat": {
+      "url": "http://YOUR-HA-IP:8015/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR-API-KEY"
+      }
+    }
+  }
+}
+```
+
+Or behind Cloudflare Tunnel (where custom headers cannot be set):
+
+```json
+{
+  "mcpServers": {
+    "ha-addons-lifeboat": {
+      "url": "https://lifeboat.yourdomain.com/mcp/YOUR-API-KEY"
+    }
+  }
+}
+```
+
+### SSE (Server-Sent Events)
+
+For clients using SSE:
+
+- **URL**: `http://YOUR-HA-IP:8015/sse?api_key=YOUR-API-KEY`
+- **Path-based SSE**: `http://YOUR-HA-IP:8015/sse/YOUR-API-KEY`
+
+```json
+{
+  "mcpServers": {
+    "ha-addons-lifeboat": {
       "url": "http://YOUR-HA-IP:8015/sse?api_key=YOUR-API-KEY",
       "transport": "sse"
     }
@@ -47,9 +86,26 @@ Add this to your Kiro MCP settings (`.kiro/settings/mcp.json`):
 }
 ```
 
-Replace `YOUR-HA-IP` with your Home Assistant's IP address and `YOUR-API-KEY` with the key from the addon logs.
+## Recommended Dual-Server Setup
 
-**Using Cloudflare?** No worries, the addon handles that automatically. Just use your public URL instead of the local IP.
+For maximum AI reliability, configure both servers in your AI assistant:
+
+```json
+{
+  "mcpServers": {
+    "home-assistant-full": {
+      "url": "http://YOUR-HA-IP:8010/mcp",
+      "headers": { "Authorization": "Bearer FULL-SERVER-API-KEY" }
+    },
+    "home-assistant-lifeboat": {
+      "url": "http://YOUR-HA-IP:8015/mcp",
+      "headers": { "Authorization": "Bearer LIFEBOAT-API-KEY" }
+    }
+  }
+}
+```
+
+Now, your AI can freely manage entities and automations via the full server, while safely falling back to the lifeboat server to update, restart, or repair add-ons!
 
 ## Configuration Options
 
@@ -110,7 +166,7 @@ If you're exposing this through Cloudflare or another proxy, the addon handles a
 
 ## Version
 
-Current version: **1.2.0**
+Current version: **1.3.0**
 
 This is production-ready and stable. All 18 tools have been tested and work reliably.
 

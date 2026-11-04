@@ -1,8 +1,9 @@
 """
-Configuration management for Home Assistant MCP Server.
+Configuration management for HA Addon MCP Server (Lifeboat).
 """
 
 import os
+import json
 import secrets
 import logging
 from dataclasses import dataclass
@@ -18,8 +19,8 @@ class ServerConfig:
     transport_type: str
     host: str
     port: int
-    server_name: str = "home-assistant-mcp"
-    server_version: str = "1.2.0"
+    server_name: str = "ha-addon-mcp-server"
+    server_version: str = "1.3.0"
 
 
 def generate_api_key() -> str:
@@ -28,13 +29,36 @@ def generate_api_key() -> str:
 
 
 def load_config() -> ServerConfig:
-    """Load configuration from environment variables."""
-    # Get configuration from environment
-    ha_token = os.environ.get("HA_TOKEN")
-    api_key = os.environ.get("API_KEY", "").strip()
-    transport_type = os.environ.get("TRANSPORT", "sse").lower()
-    host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", "8010"))
+    """Load configuration from /data/options.json (Home Assistant) with env fallback."""
+    options_data: dict = {}
+    options_file = os.environ.get("OPTIONS_PATH", "/data/options.json")
+    if os.path.exists(options_file):
+        try:
+            with open(options_file, "r", encoding="utf-8") as f:
+                options_data = json.load(f)
+            logger.info(f"Loaded add-on configuration from {options_file}")
+        except Exception as e:
+            logger.warning(f"Could not read {options_file}: {e}")
+
+    # Base options (options.json takes precedence, falls back to env vars)
+    ha_token = options_data.get("ha_token") or os.environ.get("HA_TOKEN")
+    api_key = str(options_data.get("api_key") or os.environ.get("API_KEY", "")).strip()
+
+    raw_transport = str(options_data.get("transport") or os.environ.get("TRANSPORT", "sse")).lower().strip()
+    if raw_transport in ("streamable-http", "streamable_http", "streamablehttp"):
+        transport_type = "streamable-http"
+    elif raw_transport == "stdio":
+        transport_type = "stdio"
+    elif raw_transport in ("all", "both"):
+        transport_type = "all"
+    else:
+        transport_type = "sse"
+
+    host = str(options_data.get("host") or os.environ.get("HOST", "0.0.0.0"))
+    try:
+        port = int(options_data.get("port") or os.environ.get("PORT", "8015"))
+    except (ValueError, TypeError):
+        port = 8015
     
     # Generate API key if not provided
     if not api_key:
