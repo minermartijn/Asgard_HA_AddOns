@@ -10,24 +10,56 @@ class AutomationAPI:
     """Mixin for automation management API methods."""
     
     async def list_automations(self) -> list[dict[str, Any]]:
-        """List all automations using REST API.
+        """List all automations using the supported states and config APIs.
+
+        Home Assistant does not expose a collection endpoint at
+        ``/api/config/automation/config``. Discover automation entities from
+        ``/api/states`` and then enrich them through the supported per-item
+        config endpoint.
         
         Returns:
             List of automation configurations
         """
-        try:
-            result = await self._make_request(
-                "GET",
-                f"{self.ha_url}/api/config/automation/config",
-                use_ha_token=True
+        states = await self._make_request(
+            "GET",
+            f"{self.ha_url}/api/states",
+            use_ha_token=True
+        )
+
+        automation_states = [
+            state for state in states if isinstance(state, dict)
+            and state.get("entity_id", "").startswith("automation.")
+        ] if isinstance(states, list) else []
+
+        automations = []
+        for state in automation_states:
+            attributes = state.get("attributes") or {}
+            automation_id = attributes.get("id")
+            config = {}
+
+            if automation_id:
+                try:
+                    config = await self.get_automation(str(automation_id))
+                except Exception as exc:
+                    logger.warning(
+                        "Could not load configuration for automation %s: %s",
+                        automation_id,
+                        exc,
+                    )
+
+            automation = dict(config) if isinstance(config, dict) else {}
+            automation.setdefault("id", automation_id or state.get("entity_id"))
+            automation.setdefault(
+                "alias",
+                attributes.get("friendly_name") or state.get("entity_id", "Unnamed"),
             )
-            
-            logger.info(f"Listed {len(result) if result else 0} automations")
-            return result if isinstance(result, list) else []
-        
-        except Exception as e:
-            logger.error(f"Failed to list automations: {e}")
-            return []
+            automation["entity_id"] = state.get("entity_id")
+            automation["state"] = state.get("state")
+            automation["last_triggered"] = attributes.get("last_triggered")
+            automations.append(automation)
+
+        logger.info("Listed %d automations", len(automations))
+        return automations
     
     async def get_automation(self, automation_id: str) -> dict[str, Any]:
         """Get specific automation configuration.

@@ -21,7 +21,7 @@ class ServerConfig:
     port: int
     enabled_tools: list[str]
     server_name: str = "home-assistant-mcp"
-    server_version: str = "1.10.2"
+    server_version: str = "1.10.3"
 
 
 def generate_api_key() -> str:

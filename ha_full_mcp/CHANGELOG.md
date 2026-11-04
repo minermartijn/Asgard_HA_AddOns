@@ -2,6 +2,12 @@
 
 All notable changes to HA Full MCP Server will be documented in this file.
 
+## [1.10.3] - 2026-11-04
+
+### Fixed
+- **Automation Discovery**: Discover automations from the supported Home Assistant states API, then enrich each result with its individual automation configuration instead of calling the unsupported collection endpoint
+- **Discovery Error Reporting**: Stop converting states API failures into a misleading empty automation list, while retaining runtime metadata when an individual configuration cannot be loaded
+
 ## [1.10.2] - 2026-11-04
 
 ### Added
