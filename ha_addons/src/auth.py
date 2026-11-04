@@ -31,19 +31,19 @@ def verify_api_key(request: Request, api_key: str) -> bool:
         True if authentication succeeds, False otherwise
     """
     # Check query parameter first (for Cloudflare compatibility)
-    query_key = request.query_params.get("api_key", "")
+    query_key = request.query_params.get("api_key", "").strip()
     if query_key and secrets.compare_digest(query_key, api_key):
         return True
     
-    # Check Authorization header (Bearer token)
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header[7:]
+    # Check Authorization header (Bearer token, case-insensitive scheme)
+    auth_header = request.headers.get("Authorization", "").strip()
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
         if secrets.compare_digest(token, api_key):
             return True
     
     # Check X-API-Key header
-    request_key = request.headers.get("X-API-Key", "")
+    request_key = request.headers.get("X-API-Key", "").strip()
     if request_key and secrets.compare_digest(request_key, api_key):
         return True
     
@@ -66,7 +66,7 @@ def verify_path_api_key(request: Request, api_key: str) -> bool:
     Returns:
         True if authentication succeeds, False otherwise
     """
-    path_key = request.path_params.get("api_key", "")
+    path_key = request.path_params.get("api_key", "").strip()
     if not path_key:
         return False
     return secrets.compare_digest(path_key, api_key)

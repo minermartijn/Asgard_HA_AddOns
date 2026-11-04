@@ -2,6 +2,18 @@
 
 All notable changes to HA Addon MCP Server will be documented in this file.
 
+## [1.3.0] - 2026-11-04
+
+### Added
+- **Streamable HTTP Transport (`/mcp` and `/mcp/{api_key}`)**: Modern single-endpoint HTTP transport for modern MCP clients (Cursor, Claude Desktop, Kiro) alongside SSE
+- **Health Check Endpoint (`/health`)**: Lightweight unauthenticated ping endpoint returning server status and version
+- **Lifeboat / Recovery Architecture**: Positioned as the dedicated recovery sidecar on port 8015, enabling AI assistants to inspect logs, restart, rebuild, or reconfigure other add-ons (including `ha_full_mcp`) if they crash or break during updates
+- **Direct `/data/options.json` Parsing**: Reads configuration directly from Home Assistant's JSON options for fast and reliable startup
+
+### Fixed
+- **Dependency Pin**: Pinned `mcp[cli]>=1.30.0,<2` to prevent breaking changes from MCP SDK v2.x
+- **Authentication Robustness**: Added whitespace stripping and case-insensitive `Bearer` prefix support
+
 ## [1.2.0] - 2026-02-14
 
 ### Changed
