@@ -1,6 +1,6 @@
 # HA Addon MCP Server (Lifeboat)
 
-[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
+[![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Compatible-green.svg)](https://www.home-assistant.io/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-orange.svg)](https://modelcontextprotocol.io/)
 
@@ -166,7 +166,7 @@ If you're exposing this through Cloudflare or another proxy, the addon handles a
 
 ## Version
 
-Current version: **1.3.0**
+Current version: **1.3.2**
 
 This is production-ready and stable. All 18 tools have been tested and work reliably.
 

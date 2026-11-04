@@ -1,14 +1,11 @@
 name: HA Addon MCP Server
-version: "1.3.1"
+version: "1.3.2"
 slug: ha_addon_mcp_server
 description: Lightweight Model Context Protocol (MCP) server dedicated to Home Assistant add-on lifecycle and recovery (start, stop, restart, update, rebuild, logs, configuration). Serves as an independent lifeboat server.
 url: https://github.com/minermartijn/Asgard_HA_AddOns
 arch:
   - aarch64
   - amd64
-  - armhf
-  - armv7
-  - i386
 startup: application
 boot: auto
 init: false
@@ -39,9 +36,12 @@ supervisor_api: true
 privileged:
   - SYS_ADMIN
 map:
-  - config:rw
-  - ssl:ro
-  - addons:ro
-  - backup:ro
+  - type: homeassistant_config
+    read_only: false
+    path: /config
+  - type: ssl
+  - type: local_apps
+    path: /addons
+  - type: backup
 ingress: false
 panel_icon: mdi:api
