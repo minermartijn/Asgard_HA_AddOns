@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from typing import Any
+import anyio
 from mcp.types import Tool, TextContent
 
 logger = logging.getLogger(__name__)
@@ -232,10 +233,19 @@ def get_addon_tool_definitions() -> list[Tool]:
         ),
         Tool(
             name="reload_addons",
-            description="Reload the addon list to refresh available addons. This is useful after adding a new repository or when the addon list needs to be refreshed without restarting Home Assistant. The operation is quick and does not affect running addons.",
+            description="Reload the addon store to refresh available addons and check for updates. Runs promptly without blocking the MCP connection; if git repo refresh takes longer than wait_timeout, it continues running safely in the background.",
             inputSchema={
                 "type": "object",
-                "properties": {},
+                "properties": {
+                    "wait_timeout": {
+                        "type": "number",
+                        "description": "Maximum seconds to wait synchronously before detaching to background (default: 8.0, max: 15.0). Prevents client timeouts.",
+                    },
+                    "wait": {
+                        "type": "boolean",
+                        "description": "Whether to wait up to wait_timeout seconds (default: true). Set false to initiate in background and return immediately.",
+                    },
+                },
                 "required": [],
             },
         ),
@@ -1248,25 +1258,35 @@ async def handle_addon_tool(name: str, arguments: dict[str, Any], ha_client) -> 
         
         elif name == "reload_addons":
             try:
-                result = "# Reloading Add-on List\n\n"
-                
-                # Perform reload
-                reload_result = await ha_client.reload_addons()
-                
-                result += "✓ **Add-on list reloaded successfully**\n\n"
-                result += "The addon catalog has been refreshed. Any new addons from configured repositories should now be visible.\n\n"
-                
-                result += "## What This Does\n\n"
-                result += "- Refreshes the list of available addons from all repositories\n"
-                result += "- Updates addon metadata and versions\n"
-                result += "- Does not affect running addons\n"
-                result += "- No restart required\n\n"
-                
-                result += "## Next Steps\n\n"
-                result += "- Use `list_store_addons` to see all available addons\n"
-                result += "- Use `list_addons` to see installed addons\n"
-                result += "- Install new addons with `install_addon <slug>`\n"
-                
+                wait = arguments.get("wait", True)
+                wait_timeout = min(float(arguments.get("wait_timeout", 8.0)), 15.0)
+                wait_seconds = wait_timeout if wait else 0.0
+
+                reload_result = await ha_client.reload_addons(wait_seconds=wait_seconds)
+                status = reload_result.get("status", "completed")
+
+                result = "# Add-on Store Reload\n\n"
+                if status == "completed":
+                    result += "✓ **Add-on list reloaded successfully**\n\n"
+                    result += "The addon catalog has been refreshed. Any new addons or updates from configured repositories are now visible.\n\n"
+                    result += "## Next Steps\n\n"
+                    result += "- Use `list_store_addons` to see all available addons\n"
+                    result += "- Use `list_addons` to see installed addons\n"
+                    result += "- Check update status with `get_addon_info <slug>`\n"
+                elif status == "in_progress":
+                    elapsed = reload_result.get("elapsed_seconds", 0)
+                    result += "⏳ **Add-on store refresh is running in the background**\n\n"
+                    result += f"Home Assistant Supervisor is refreshing git repositories ({elapsed}s elapsed).\n\n"
+                    result += "**Your MCP connection remains active and stable.**\n"
+                    result += "The operation was detached so that client connection timeouts are prevented.\n\n"
+                    result += "## Next Steps\n\n"
+                    result += "- The refresh continues automatically in the background.\n"
+                    result += "- You do not need to call `reload_addons` again.\n"
+                    result += "- You can proceed with other commands or inspect add-ons with `get_addon_info` or `list_addons`.\n"
+                else:
+                    result += f"ℹ️ **Status**: {status}\n\n"
+                    result += f"{reload_result.get('message', 'Store refresh processed')}\n"
+
                 return [TextContent(type="text", text=result)]
                 
             except PermissionError as pe:
@@ -1524,6 +1544,9 @@ async def handle_addon_tool(name: str, arguments: dict[str, Any], ha_client) -> 
         else:
             return [TextContent(type="text", text=f"Unknown addon tool: {name}")]
     
+    except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+        logger.warning(f"Tool {name} execution was cancelled")
+        raise
     except Exception as e:
         logger.error(f"Error executing addon tool {name}: {e}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]

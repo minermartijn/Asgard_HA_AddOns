@@ -2,6 +2,14 @@
 
 All notable changes to HA Addon MCP Server will be documented in this file.
 
+## [1.3.1] - 2026-11-04
+
+### Fixed
+- **Non-blocking Store Refresh (`reload_addons`)**: Supervisor add-on reload (`POST /addons/reload`) is inherently long-running (fetching external git repositories). `reload_addons` now uses a bounded wait (default 8s) and safely detaches long operations to an asynchronous background task (`asyncio.shield`), preventing client MCP timeouts (e.g. Paperclip/Claude 30s tool timeouts).
+- **Tool Catalog Availability**: Fixed issue where slow or timed-out store refreshes hung the transport or caused subsequent tool calls and `tools/list` catalog requests to become unavailable.
+- **ASGI Lifespan & SSE Reconnect Resilience**: Updated `routes.py` to return `AlreadySentResponse()` on SSE connections (fixing a `TypeError: 'NoneType' object is not callable` in Starlette on client disconnect) and handled client cancellations (`CancelledError`) cleanly across SSE and Streamable HTTP.
+- **Client Timeouts in API Client**: Configured default `ClientTimeout` on `aiohttp.ClientSession` so supervisor requests never stall indefinitely.
+
 ## [1.3.0] - 2026-11-04
 
 ### Added
