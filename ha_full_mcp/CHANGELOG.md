@@ -2,6 +2,11 @@
 
 All notable changes to HA Full MCP Server will be documented in this file.
 
+## [1.10.1] - 2026-11-04
+
+### Fixed
+- Pinned `mcp[cli]>=1.30.0,<2` in `requirements.txt` to prevent breaking changes introduced in MCP Python SDK v2.x (which removed `Server.list_tools`)
+
 ## [1.10.0] - 2026-11-04
 
 ### Added
