@@ -1,8 +1,8 @@
 name: HA Full MCP Server
-version: "1.10.1"
+version: "1.10.2"
 slug: ha_full_mcp_server
 description: Model Context Protocol server for Home Assistant with full API access including backup, integration, entity management, and comprehensive diagnostics
-url: https://github.com/yourusername/ha-full-mcp-server
+url: https://github.com/minermartijn/Asgard_HA_AddOns
 arch:
   - aarch64
   - amd64
@@ -132,7 +132,7 @@ schema:
     check_config: bool?
   backup_tools:
     create_backup: bool?
-    list_backons: bool?
+    list_backups: bool?
     get_backup_info: bool?
     restore_backup: bool?
     delete_backup: bool?

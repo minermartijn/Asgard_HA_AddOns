@@ -49,6 +49,7 @@ async def run_sse_server(config, ha_client):
         from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from starlette.applications import Starlette
     from starlette.routing import Route
+    from starlette.responses import JSONResponse
     from starlette.middleware.cors import CORSMiddleware
     import uvicorn
     
@@ -75,8 +76,12 @@ async def run_sse_server(config, ha_client):
     # Create SSE transport with API key in path (Cloudflare-compatible)
     sse = SseServerTransport(f"/messages/{config.api_key}")
     
-    # Create Streamable HTTP session manager
-    session_manager = StreamableHTTPSessionManager(server)
+    # Create Streamable HTTP session manager with idle timeout & session limits
+    session_manager = StreamableHTTPSessionManager(
+        server,
+        session_idle_timeout=1800,
+        max_sessions=100,
+    )
     
     # Create route handlers
     handle_sse = create_sse_handler(
@@ -95,6 +100,16 @@ async def run_sse_server(config, ha_client):
         session_manager, config.api_key
     )
 
+    async def handle_health(_request):
+        """Unauthenticated health check endpoint for monitoring."""
+        return JSONResponse({
+            "status": "healthy",
+            "server": config.server_name,
+            "version": config.server_version,
+            "transport": config.transport_type,
+            "tools_count": len(config.enabled_tools),
+        })
+
     @asynccontextmanager
     async def lifespan(app: Starlette):
         async with session_manager.run():
@@ -104,6 +119,7 @@ async def run_sse_server(config, ha_client):
     app = Starlette(
         lifespan=lifespan,
         routes=[
+            Route("/health", handle_health, methods=["GET"]),
             Route("/sse", handle_sse, methods=["GET"]),
             Route("/messages", handle_messages, methods=["POST"]),
             Route("/sse/{api_key}", handle_sse_with_key, methods=["GET"]),
@@ -129,6 +145,7 @@ async def run_sse_server(config, ha_client):
     )
     
     logger.info(f"Starting HTTP server on {config.host}:{config.port}")
+    logger.info(f"Health check endpoint: http://{config.host}:{config.port}/health")
     logger.info(f"MCP SSE endpoint: http://{config.host}:{config.port}/sse")
     logger.info(f"MCP Streamable HTTP endpoint: http://{config.host}:{config.port}/mcp")
     
