@@ -1,6 +1,6 @@
 # Home Assistant MCP Server
 
-[![Version](https://img.shields.io/badge/version-1.10.4-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
+[![Version](https://img.shields.io/badge/version-1.11.0-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Compatible-green.svg)](https://www.home-assistant.io/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-orange.svg)](https://modelcontextprotocol.io/)
 
@@ -29,6 +29,9 @@ Create full or partial backups with encryption, list and inspect backups, restor
 ### 🏠 Device & Entity Control (6 tools)
 List and filter entities, get current states, control any device through service calls, view entity history, and discover available services.
 
+### 🗂️ Registry Inventory (3 tools)
+Inventory areas, devices, and config entries with optional area, integration, and load-state filters.
+
 ### 🔌 Integration Management (4 tools)
 List all configured integrations, reload integrations without restarting, view integration details, and remove integrations.
 
@@ -44,7 +47,7 @@ Monitor system health (CPU, memory, disk, database), analyze error logs, find un
 ### ⚙️ System Administration (6 tools)
 Read and write configuration files, validate configuration before restarting, view Supervisor and Core logs, and restart Home Assistant Core.
 
-**Total: 59 tools** across 8 categories
+**Total: 62 tools** across 9 categories
 
 ## Installation
 
@@ -261,6 +264,9 @@ list_integrations, reload_integration, get_integration_info, remove_integration
 **Entity Management (6 tools):**
 list_entities, get_entity_state, set_entity_state, call_service, get_services, get_entity_history
 
+**Registry Inventory (3 tools):**
+list_areas, list_devices, list_config_entries
+
 **Dashboard Management (4 tools):**
 list_dashboards, get_dashboard_config, create_dashboard, delete_dashboard
 
@@ -339,7 +345,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ---
 
-**Version**: 1.10.4
+**Version**: 1.11.0
 **Status**: Production Ready  
 **Tested**: Home Assistant 2024.x and later
 

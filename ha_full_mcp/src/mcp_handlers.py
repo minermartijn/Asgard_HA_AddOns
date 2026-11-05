@@ -14,6 +14,7 @@ from tools.entity_tools import get_entity_tool_definitions, handle_entity_tool
 from tools.dashboard_tools import get_dashboard_tool_definitions, handle_dashboard_tools
 from tools.automation_tools import get_automation_tool_definitions, handle_automation_tools
 from tools.diagnostic import get_diagnostic_tool_definitions, handle_diagnostic_tool
+from tools.inventory_tools import get_inventory_tool_definitions, handle_inventory_tool
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ def create_list_tools_handler(ha_client, enabled_tools: list[str] = None):
         all_tools_list.extend(get_dashboard_tool_definitions())
         all_tools_list.extend(get_automation_tool_definitions())
         all_tools_list.extend(get_diagnostic_tool_definitions())
+        all_tools_list.extend(get_inventory_tool_definitions())
         
         # Filter tools based on enabled_tools configuration
         if enabled_tools is not None:
@@ -100,6 +102,8 @@ def create_call_tool_handler(ha_client):
             "get_startup_time_breakdown", "validate_all_automations", "list_deprecated_features",
             "get_integration_diagnostics"
         ]
+
+        inventory_tools = ["list_areas", "list_devices", "list_config_entries"]
         
         # Route to appropriate tool handler
         if name in addon_tools:
@@ -116,6 +120,8 @@ def create_call_tool_handler(ha_client):
             return await handle_automation_tools(name, arguments, ha_client)
         elif name in diagnostic_tools:
             return await handle_diagnostic_tool(name, arguments, ha_client)
+        elif name in inventory_tools:
+            return await handle_inventory_tool(name, arguments, ha_client)
         
         return [TextContent(type="text", text=f"Unknown tool: {name}")]
     

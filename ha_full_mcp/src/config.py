@@ -21,7 +21,7 @@ class ServerConfig:
     port: int
     enabled_tools: list[str]
     server_name: str = "home-assistant-mcp"
-    server_version: str = "1.10.4"
+    server_version: str = "1.11.0"
 
 
 def generate_api_key() -> str:
@@ -110,6 +110,10 @@ def load_config() -> ServerConfig:
         "call_service": ("entity_tools", "call_service", "ENTITY_TOOLS_CALL_SERVICE"),
         "get_services": ("entity_tools", "get_services", "ENTITY_TOOLS_GET_SERVICES"),
         "get_entity_history": ("entity_tools", "get_entity_history", "ENTITY_TOOLS_GET_ENTITY_HISTORY"),
+        # Registry Inventory Tools
+        "list_areas": ("inventory_tools", "list_areas", "INVENTORY_TOOLS_LIST_AREAS"),
+        "list_devices": ("inventory_tools", "list_devices", "INVENTORY_TOOLS_LIST_DEVICES"),
+        "list_config_entries": ("inventory_tools", "list_config_entries", "INVENTORY_TOOLS_LIST_CONFIG_ENTRIES"),
         # Dashboard Tools
         "list_dashboards": ("dashboard_tools", "list_dashboards", "DASHBOARD_TOOLS_LIST_DASHBOARDS"),
         "get_dashboard_config": ("dashboard_tools", "get_dashboard_config", "DASHBOARD_TOOLS_GET_DASHBOARD_CONFIG"),

@@ -2,6 +2,14 @@
 
 All notable changes to HA Full MCP Server will be documented in this file.
 
+## [1.11.0] - 2026-11-05
+
+### Added
+- `list_areas`: Read-only area registry inventory with IDs, names, floors, aliases, and labels.
+- `list_devices`: Read-only device registry inventory with optional area and config-entry filters.
+- `list_config_entries`: Read-only config-entry inventory with optional integration-domain and load-state filters.
+- Dedicated tool toggles for each inventory operation and regression coverage for WebSocket commands, filtering, authentication, and connection cleanup.
+
 ## [1.10.4] - 2026-11-04
 
 ### Changed

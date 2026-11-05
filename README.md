@@ -8,7 +8,7 @@ This repository contains a collection of custom Home Assistant addons maintained
 A lightweight Model Context Protocol (MCP) server dedicated to add-on lifecycle and emergency recovery (port 8015). Enables AI assistants to inspect logs, restart, rebuild, or fix add-ons even if the main Home Assistant MCP server goes offline during updates. Supports Streamable HTTP and SSE transports.
 
 ### [HA Full MCP Server](./ha_full_mcp)
-A comprehensive Model Context Protocol (MCP) server that enables AI assistants to manage and control your entire Home Assistant installation (devices, entities, automation discovery and management, backups, diagnostics), supporting both Streamable HTTP and SSE transports concurrently.
+A comprehensive Model Context Protocol (MCP) server that enables AI assistants to manage and control your entire Home Assistant installation (areas, devices, config entries, entities, automation discovery and management, backups, diagnostics), supporting both Streamable HTTP and SSE transports concurrently.
 
 ### [Home Stock](./home_stock)
 A beautiful, low-friction household stock & shopping tracker. Tap to adjust quantities, get an automatic shopping list, push it straight to Home Assistant's own to-do list, and expose stock sensors for your dashboards and automations.

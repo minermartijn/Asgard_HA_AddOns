@@ -8,9 +8,10 @@ from .entity_api import EntityAPI
 from .dashboard_api import DashboardAPI
 from .automation_api import AutomationAPI
 from .diagnostic_api import DiagnosticAPI
+from .inventory_api import InventoryAPI
 
 
-class HomeAssistantClient(BaseClient, AddonAPI, SystemAPI, BackupAPI, IntegrationAPI, EntityAPI, DashboardAPI, AutomationAPI, DiagnosticAPI):
+class HomeAssistantClient(BaseClient, AddonAPI, SystemAPI, BackupAPI, IntegrationAPI, EntityAPI, DashboardAPI, AutomationAPI, DiagnosticAPI, InventoryAPI):
     """
     Complete Home Assistant API client combining all API modules.
     
@@ -25,6 +26,7 @@ class HomeAssistantClient(BaseClient, AddonAPI, SystemAPI, BackupAPI, Integratio
     - DashboardAPI: Dashboard management (create, update, delete)
     - AutomationAPI: Automation management (create, update, trigger)
     - DiagnosticAPI: System diagnostics and health monitoring
+    - InventoryAPI: Read-only area, device, and config-entry registries
     """
     pass
 
