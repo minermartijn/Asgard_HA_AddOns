@@ -26,6 +26,5 @@ COPY src/ ./src/
 
 # Make run script executable
 RUN chmod a+x run.sh
-# Version: 0.6.0 - Added standard SSE transport for MCP client compatibility
 # Run the application
 CMD [ "/app/run.sh" ]

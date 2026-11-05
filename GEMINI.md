@@ -16,8 +16,8 @@ This workspace is a dedicated Home Assistant Addon Repository containing multipl
 
 ### 1. HA Addon MCP Server (`ha_addons/`)
 - **Name**: HA Addon MCP Server
-- **Version**: 1.3.2
-- **Purpose**: Lightweight lifeboat MCP server on port 8015 for Home Assistant add-on lifecycle and recovery (start, stop, restart, update, rebuild, logs, configuration) supporting both SSE and Streamable HTTP.
+- **Version**: 1.4.0
+- **Purpose**: Lightweight lifeboat MCP server on port 8015 for Home Assistant add-on lifecycle and recovery, including narrowly scoped single-add-on backup and restore, supporting both SSE and Streamable HTTP.
 - **Status**: Stable / Production Ready.
 
 ### 2. HA Full MCP Server (`ha_full_mcp/`)

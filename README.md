@@ -5,7 +5,7 @@ This repository contains a collection of custom Home Assistant addons maintained
 ## Available Addons
 
 ### [HA Addon MCP Server (Lifeboat)](./ha_addons)
-A lightweight Model Context Protocol (MCP) server dedicated to add-on lifecycle and emergency recovery (port 8015). Enables AI assistants to inspect logs, restart, rebuild, or fix add-ons even if the main Home Assistant MCP server goes offline during updates. Supports Streamable HTTP and SSE transports.
+A lightweight Model Context Protocol (MCP) server dedicated to add-on lifecycle and emergency recovery (port 8015). Enables AI assistants to inspect logs, create and inspect single-add-on backups, restore a verified add-on backup, restart, rebuild, or fix add-ons even if the main Home Assistant MCP server goes offline during updates. Supports Streamable HTTP and SSE transports.
 
 ### [HA Full MCP Server](./ha_full_mcp)
 A comprehensive Model Context Protocol (MCP) server that enables AI assistants to manage and control your entire Home Assistant installation (areas, devices, config entries, entities, automation discovery and management, backups, diagnostics), supporting both Streamable HTTP and SSE transports concurrently.

@@ -2,6 +2,16 @@
 
 All notable changes to HA Addon MCP Server will be documented in this file.
 
+## [1.4.0] - 2026-11-05
+
+### Added
+- `create_addon_backup`, `list_backups`, `get_backup_info`, and `restore_addon_backup` recovery tools.
+- Exact add-on membership validation before restore, including encrypted-backup password checks.
+- Regression coverage for Supervisor request paths/payloads, validation failures, and tool routing.
+
+### Security
+- Redacted password, token, and API-key values from MCP tool-call logging.
+
 ## [1.3.2] - 2026-11-04
 
 ### Changed

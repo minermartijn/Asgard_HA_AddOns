@@ -8,6 +8,7 @@ from mcp.types import Resource, TextContent, Tool
 import mcp.types as types
 
 from tools.addon_tools import get_addon_tool_definitions, handle_addon_tool
+from tools.backup_tools import get_backup_tool_definitions, handle_backup_tool
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ def create_list_tools_handler(ha_client):
         
         # Add addon management tools
         tools.extend(get_addon_tool_definitions())
+        tools.extend(get_backup_tool_definitions())
         
         # Future: Add entity tools
         # tools.extend(get_entity_tool_definitions())
@@ -37,7 +39,8 @@ def create_call_tool_handler(ha_client):
     """Create handler for executing tools."""
     async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
         """Handle tool execution."""
-        logger.info(f"Tool called: {name} with arguments: {arguments}")
+        safe_arguments = {key: "[REDACTED]" if key.lower() in {"password", "token", "api_key"} else value for key, value in (arguments or {}).items()}
+        logger.info(f"Tool called: {name} with arguments: {safe_arguments}")
         
         if arguments is None:
             arguments = {}
@@ -53,6 +56,9 @@ def create_call_tool_handler(ha_client):
         
         if name in addon_tools:
             return await handle_addon_tool(name, arguments, ha_client)
+
+        if name in {"create_addon_backup", "list_backups", "get_backup_info", "restore_addon_backup"}:
+            return await handle_backup_tool(name, arguments, ha_client)
         
         # Future: Add other tool categories
         # if name in entity_tools:
