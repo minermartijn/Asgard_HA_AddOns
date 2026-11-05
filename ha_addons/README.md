@@ -1,6 +1,6 @@
 # HA Addon MCP Server (Lifeboat)
 
-[![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/minermartijn/Asgard_HA_AddOns)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Compatible-green.svg)](https://www.home-assistant.io/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-orange.svg)](https://modelcontextprotocol.io/)
 
@@ -20,7 +20,7 @@ If you use a comprehensive MCP server like **HA Full MCP Server** (port 8010) to
 
 Because it relies solely on Home Assistant's internal Supervisor API (`SUPERVISOR_TOKEN`), it continues functioning even if other components or Core tokens are unavailable.
 
-## What can it do? (18 Tools)
+## What can it do? (22 Tools)
 
 - **Monitor & Inspect**: `list_addons`, `get_addon_info`, `get_addon_logs`, `get_supervisor_logs`
 - **Control**: `start_addon`, `stop_addon`, `restart_addon`
@@ -28,6 +28,7 @@ Because it relies solely on Home Assistant's internal Supervisor API (`SUPERVISO
 - **Configure**: `get_addon_configuration`, `set_addon_configuration`, `validate_addon_configuration`
 - **Catalog**: `list_store_addons`, `reload_addons`, `check_addon_availability`
 - **System**: `restart_homeassistant`
+- **Backup & Restore**: `create_addon_backup`, `list_backups`, `get_backup_info`, `restore_addon_backup`
 
 ## Connecting AI Assistants
 
@@ -166,13 +167,13 @@ If you're exposing this through Cloudflare or another proxy, the addon handles a
 
 ## Version
 
-Current version: **1.3.2**
+Current version: **1.4.0**
 
-This is production-ready and stable. All 18 tools have been tested and work reliably.
+This is production-ready and stable. All 22 tools have automated coverage for their critical paths.
 
 ## What can you actually do with this?
 
-Here's everything the addon can do (18 tools total):
+Here's everything the addon can do (22 tools total):
 
 **Managing your addons:**
 - See what's installed
@@ -201,6 +202,11 @@ Here's everything the addon can do (18 tools total):
 
 **System control:**
 - Restart Home Assistant Core
+
+**Backup and restore:**
+- Create a partial backup containing exactly one add-on
+- List and inspect backup metadata
+- Restore exactly one add-on only after verifying that the backup contains its exact slug
 
 All of this through simple conversations with your AI assistant. No clicking around in the UI.
 

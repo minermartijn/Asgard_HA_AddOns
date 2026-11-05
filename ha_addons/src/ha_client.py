@@ -145,6 +145,78 @@ class HomeAssistantClient:
         except aiohttp.ClientError as e:
             logger.error(f"Failed to get addon logs: {e}")
             raise
+
+    async def create_addon_backup(
+        self, addon_slug: str, name: str | None = None, password: str | None = None
+    ) -> dict[str, Any]:
+        """Create a partial backup containing exactly one add-on."""
+        if not addon_slug:
+            raise ValueError("addon_slug cannot be empty")
+        payload: dict[str, Any] = {
+            "name": name or f"Lifeboat backup - {addon_slug}",
+            "addons": [addon_slug],
+            "folders": [],
+        }
+        if password:
+            payload["password"] = password
+        result = await self._make_request(
+            "POST", f"{self.hassio_url}/backups/new/partial",
+            use_ha_token=False, json=payload,
+        )
+        data = result.get("data", {})
+        return {
+            "result": result.get("result", "ok"), "job_id": result.get("job_id"),
+            "slug": data.get("slug"), "name": payload["name"],
+            "addon_slug": addon_slug, "protected": bool(password), "data": data,
+        }
+
+    async def list_backups(self) -> list[dict[str, Any]]:
+        """List Home Assistant backups visible to Supervisor."""
+        result = await self._make_request("GET", f"{self.hassio_url}/backups", use_ha_token=False)
+        return result.get("data", {}).get("backups", [])
+
+    async def get_backup_info(self, backup_slug: str) -> dict[str, Any]:
+        """Return metadata for one backup."""
+        if not backup_slug:
+            raise ValueError("backup_slug cannot be empty")
+        result = await self._make_request(
+            "GET", f"{self.hassio_url}/backups/{backup_slug}/info", use_ha_token=False
+        )
+        return result.get("data", {})
+
+    async def restore_addon_backup(
+        self, backup_slug: str, addon_slug: str, password: str | None = None
+    ) -> dict[str, Any]:
+        """Restore exactly one add-on after verifying it is present in the backup."""
+        if not backup_slug:
+            raise ValueError("backup_slug cannot be empty")
+        if not addon_slug:
+            raise ValueError("addon_slug cannot be empty")
+        backup = await self.get_backup_info(backup_slug)
+        content = backup.get("content") or {}
+        raw_addons = content.get("addons", backup.get("addons", []))
+        included_slugs = {
+            item.get("slug") if isinstance(item, dict) else item for item in raw_addons
+        }
+        included_slugs.discard(None)
+        if addon_slug not in included_slugs:
+            raise ValueError(
+                f"Backup '{backup_slug}' does not include addon '{addon_slug}'; restore refused"
+            )
+        if backup.get("protected") and not password:
+            raise ValueError("password is required for this encrypted backup")
+        payload: dict[str, Any] = {"addons": [addon_slug], "folders": []}
+        if password:
+            payload["password"] = password
+        result = await self._make_request(
+            "POST", f"{self.hassio_url}/backups/{backup_slug}/restore/partial",
+            use_ha_token=False, json=payload,
+        )
+        return {
+            "result": result.get("result", "ok"), "job_id": result.get("job_id"),
+            "backup_slug": backup_slug, "addon_slug": addon_slug,
+            "data": result.get("data", {}),
+        }
     
     async def install_addon(self, addon_slug: str, version: str = None) -> dict[str, Any]:
         """Install an addon from the store.
