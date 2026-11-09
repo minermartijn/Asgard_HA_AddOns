@@ -57,6 +57,7 @@ You need a Home Assistant installation that supports the **add-on store** (for e
 - [Architecture and trust boundaries](docs/ARCHITECTURE.md)
 - [Reproducible recovery demonstration plan](docs/DEMO.md) — no published demo recording yet
 - [Contributing and running regression tests](CONTRIBUTING.md)
+- [Development and maintainer guide](docs/MAINTAINING.md)
 - [Release procedure](docs/RELEASING.md)
 - [Current roadmap](docs/ROADMAP.md)
 - [Vulnerability reporting](SECURITY.md)
