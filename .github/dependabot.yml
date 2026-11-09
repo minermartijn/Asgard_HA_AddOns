@@ -1,0 +1,42 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: "/ha_full_mcp"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      mcp-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: "/ha_addons"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      lifeboat-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: "/baby_tracker"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      baby-tracker-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: "/home_stock"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      home-stock-dependencies:
+        patterns: ["*"]
