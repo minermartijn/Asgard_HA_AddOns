@@ -4,7 +4,7 @@ Each add-on in this repository has its own version in its folder's `config.yaml`
 
 | Add-on | Folder | Suggested GitHub release tag |
 | --- | --- | --- |
-| Full MCP | `ha_full_mcp` | `ha-full-mcp-v1.11.0` |
+| Full MCP | `ha_full_mcp` | `ha-full-mcp-v1.11.1` |
 | Lifeboat | `ha_addons` | `ha-lifeboat-v1.4.0` |
 | Baby Tracker | `baby_tracker` | `baby-tracker-v1.0.5` |
 | Home Stock | `home_stock` | `home-stock-v1.0.0` |
