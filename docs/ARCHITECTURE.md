@@ -12,6 +12,13 @@ flowchart LR
     Supervisor -->|"Restart / rebuild / restore"| Full
 ```
 
+
+## Shareable overview
+
+![Asgard Home Assistant two-MCP architecture](assets/asgard-mcp-architecture.svg)
+
+For the complete verified tool catalogs (all **62 Full MCP** and **22 Lifeboat** tools), see [MCP_TOOLS.md](MCP_TOOLS.md).
+
 ## Design principles
 
 - **Independent add-ons:** The two MCP servers run as separate add-ons and can be updated separately.
