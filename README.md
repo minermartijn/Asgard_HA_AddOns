@@ -17,6 +17,13 @@
 
 Versions above describe add-on manifests; they do not imply that corresponding GitHub Releases have already been published.
 
+## Published MCP releases
+
+- **[HA Full MCP Server v1.11.1](https://github.com/minermartijn/Asgard_HA_AddOns/releases/tag/ha-full-mcp-v1.11.1)** — 62 configured tools for broad Home Assistant management.
+- **[HA Addon MCP Server (Lifeboat) v1.4.0](https://github.com/minermartijn/Asgard_HA_AddOns/releases/tag/ha-lifeboat-v1.4.0)** — 22 focused add-on maintenance and recovery tools.
+
+Both are independently installable Home Assistant add-ons; publishing a GitHub Release does not automatically deploy the update to a running Home Assistant instance.
+
 ## Why two MCP servers?
 
 An AI assistant that updates the MCP add-on it is connected to can lose its own communication channel during a failed update. The **Lifeboat** add-on runs separately, so it may still be available to inspect logs or restart/rebuild Full MCP if the Home Assistant host and Supervisor remain operational.
