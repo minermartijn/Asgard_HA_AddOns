@@ -1,0 +1,85 @@
+name: Publish initial MCP releases
+
+# One-time publication of the maintainer-verified Full MCP and Lifeboat versions.
+# The path filter prevents unrelated future commits from re-running releases.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-initial-mcp-releases.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: initial-mcp-releases
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'minermartijn/Asgard_HA_AddOns' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate manifest versions and release note files
+        run: |
+          python -m pip install --disable-pip-version-check 'PyYAML>=6,<7'
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          releases = [
+              ("ha_full_mcp", "1.11.1", "ha-full-mcp-v1.11.1"),
+              ("ha_addons", "1.4.0", "ha-lifeboat-v1.4.0"),
+          ]
+          for folder, version, tag in releases:
+              manifest = yaml.safe_load((Path(folder) / "config.yaml").read_text(encoding="utf-8"))
+              if str(manifest["version"]) != version:
+                  raise SystemExit(f"Release blocked: {folder} manifest version does not match {version}")
+              notes = Path("docs/releases") / f"{tag}.md"
+              if not notes.is_file() or not notes.read_text(encoding="utf-8").strip():
+                  raise SystemExit(f"Release blocked: missing notes {notes}")
+              print(f"Validated {tag}: {notes}")
+          PY
+      - name: Publish HA Full MCP 1.11.1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=ha-full-mcp-v1.11.1
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Already published: $tag"
+            exit 0
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "Refusing to overwrite an existing tag without a release: $tag"
+            exit 1
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "HA Full MCP Server v1.11.1" --latest=false \
+            --notes-file "docs/releases/$tag.md"
+      - name: Publish HA Lifeboat 1.4.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=ha-lifeboat-v1.4.0
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Already published: $tag"
+            exit 0
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "Refusing to overwrite an existing tag without a release: $tag"
+            exit 1
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "HA Addon MCP Server (Lifeboat) v1.4.0" --latest=false \
+            --notes-file "docs/releases/$tag.md"
