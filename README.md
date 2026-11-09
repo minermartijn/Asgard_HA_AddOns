@@ -10,7 +10,7 @@
 
 | Add-on | Version | Purpose |
 | --- | --- | --- |
-| **[HA Full MCP Server](ha_full_mcp/README.md)** | 1.11.0 | MCP tools for device/entity queries, automations, integrations, diagnostics, configuration, backups and add-on administration. |
+| **[HA Full MCP Server](ha_full_mcp/README.md)** | 1.11.1 | MCP tools for device/entity queries, automations, integrations, diagnostics, configuration, backups and add-on administration. |
 | **[HA Addon MCP Server — Lifeboat](ha_addons/README.md)** | 1.4.0 | Separate MCP recovery path for add-on logs, lifecycle actions, and targeted add-on backup/restore. |
 | **[Home Stock](home_stock/README.md)** | 1.0.0 | Household stock quantities, a shopping list, and Home Assistant integration. |
 | **[Baby Tracker](baby_tracker/)** | 1.0.5 | Mobile-friendly feeding, diaper, sleep and growth tracking. |

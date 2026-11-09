@@ -55,12 +55,23 @@ def create_list_tools_handler(ha_client, enabled_tools: list[str] = None):
     return handle_list_tools
 
 
-def create_call_tool_handler(ha_client):
-    """Create handler for executing tools."""
+def create_call_tool_handler(ha_client, enabled_tools: list[str] | None = None):
+    """Create handler for executing only explicitly enabled tools.
+
+    When enabled_tools is None, preserve the unrestricted default for callers
+    that do not use add-on tool toggles (e.g. existing unit-test helpers).
+    Production transports must pass the configured enabled_tools list.
+    """
     async def handle_call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
         """Handle tool execution."""
-        logger.info(f"Tool called: {name} with arguments: {arguments}")
-        
+        # Never log raw arguments: tools may receive tokens and passwords.
+        # Discovery filtering alone is not an authorization boundary.
+        if enabled_tools is not None and name not in enabled_tools:
+            logger.warning("Rejected disabled MCP tool call: %s", name)
+            return [TextContent(type="text", text=f"Tool disabled: {name}")]
+
+        logger.info("Tool called: %s", name)
+
         if arguments is None:
             arguments = {}
         

@@ -22,7 +22,7 @@ This workspace is a dedicated Home Assistant Addon Repository containing multipl
 
 ### 2. HA Full MCP Server (`ha_full_mcp/`)
 - **Name**: HA Full MCP Server
-- **Version**: 1.11.0
+- **Version**: 1.11.1
 - **Purpose**: Comprehensive MCP server for full Home Assistant control (entities, automations, backups, etc.) supporting both SSE and Streamable HTTP transports.
 - **Status**: Stable / Production Ready.
 

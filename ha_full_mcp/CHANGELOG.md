@@ -2,6 +2,15 @@
 
 All notable changes to HA Full MCP Server will be documented in this file.
 
+## [1.11.1] - 2026-11-09
+
+### Security
+- Reject MCP tool calls when the corresponding add-on tool toggle is disabled, not just when listing tools.
+- Stop logging raw MCP tool-call arguments that may contain passwords or tokens.
+
+### Tests
+- Added regression tests for allowed/denied tool calls, empty allowlists, list consistency and log redaction.
+
 ## [1.11.0] - 2026-11-05
 
 ### Added
