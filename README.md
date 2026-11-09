@@ -1,3 +1,5 @@
+![Asgard — Norse-inspired Home Assistant add-on collection](docs/assets/asgard-readme-banner.svg)
+
 # Asgard Home Assistant Add-ons
 
 [![Quality checks](https://github.com/minermartijn/Asgard_HA_AddOns/actions/workflows/ci.yml/badge.svg)](https://github.com/minermartijn/Asgard_HA_AddOns/actions/workflows/ci.yml)
@@ -15,7 +17,18 @@
 | **[Home Stock](home_stock/README.md)** | 1.0.0 | Household stock quantities, a shopping list, and Home Assistant integration. |
 | **[Baby Tracker](baby_tracker/)** | 1.0.5 | Mobile-friendly feeding, diaper, sleep and growth tracking. |
 
-Versions above describe add-on manifests; they do not imply that corresponding GitHub Releases have already been published.
+The add-on store reads each add-on's own `config.yaml` version. A GitHub Release is additional release documentation and does not replace the add-on store's update mechanism.
+
+## Companion Home Assistant integrations
+
+These are separate projects by the same maintainer, **not add-ons in this repository**. They are custom integrations installed through Home Assistant's Marketplace/HACS or manually into `custom_components/`; they will **not** appear when you add this repository to the Home Assistant add-on/app store.
+
+| Integration | Purpose | Source and installation |
+| --- | --- | --- |
+| **[MyCurl](https://github.com/minermartijn/MyCurl)** | Creates sensors from HTTP/API responses, with presets and configurable data extraction. | [MyCurl repository](https://github.com/minermartijn/MyCurl) (separate custom integration) |
+| **[MyMonitor](https://github.com/minermartijn/MyMonitor)** | HTTP endpoint/service status sensors and an accompanying dashboard history card. | [MyMonitor repository](https://github.com/minermartijn/MyMonitor) (separate custom integration; dashboard card needs maintenance) |
+
+**Current code-review notes:** MyCurl executes configured curl commands through a system shell; use only trusted commands and URLs, and do not put secrets into command strings. MyMonitor's published dashboard card source currently contains unresolved Git conflict markers and should be fixed and rechecked in Home Assistant before relying on its card. The main Asgard add-ons do not depend on either integration.
 
 ## Published MCP releases
 
@@ -42,16 +55,16 @@ This is not a replacement for conventional backups: Lifeboat cannot fix a failed
 
 ## Installation
 
-You need a Home Assistant installation that supports the **add-on store** (for example, Home Assistant OS or Supervised).
+You need a Home Assistant installation that supports **Apps (formerly Add-ons)**. See Home Assistant's current **Settings → Apps** area for the app store.
 
-1. In Home Assistant, open the add-on store and choose the option to manage custom repositories.
+1. In Home Assistant, open **Settings → Apps → Install app**, then manage/add a custom repository.
 2. Add this repository URL:
 
    ```text
    https://github.com/minermartijn/Asgard_HA_AddOns
    ```
 
-3. Refresh the add-on store if necessary and install only the add-on(s) you need.
+3. Refresh the app store if necessary and install only the add-on(s) you need.
 4. Follow the add-on's README and configure its required credentials before connecting a client.
 5. Test in a non-critical environment before relying on administrative or recovery operations.
 
@@ -74,9 +87,9 @@ You need a Home Assistant installation that supports the **add-on store** (for e
 
 Each top-level add-on has its own `config.yaml`, `Dockerfile`, and version. Source code and regression tests live within the relevant add-on directory.
 
-The proposed GitHub Actions workflow checks Python syntax, Home Assistant add-on metadata and existing MCP regression tests. Actual pass/fail results are shown in GitHub Actions; do not interpret an absent badge result as passing tests.
+The GitHub Actions CI workflow checks Python syntax, Home Assistant add-on metadata and existing MCP regression tests. Actual pass/fail results are shown in GitHub Actions; do not interpret an absent badge result as passing tests.
 
-Release tags will be **namespaced per add-on** and must be published only after version checks and relevant Home Assistant testing.
+Release tags are **namespaced per add-on** and should be published only after version checks and relevant Home Assistant testing. Full MCP 1.11.1 and Lifeboat 1.4.0 have published GitHub Releases; Baby Tracker and Home Stock are not yet tagged.
 
 ## Help improve the project
 

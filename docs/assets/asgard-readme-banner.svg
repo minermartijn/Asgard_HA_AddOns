@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 440" width="1600" height="440" role="img" aria-labelledby="title desc">
+<title id="title">ASGARD — Home Assistant Add-on Collection</title>
+<desc id="desc">Cinematic Norse-inspired banner with a luminous golden ASGARD wordmark, lightning, aurora, and a stylized fortress on a mountain above a rainbow bridge. Subtitle: Home Assistant, MCP, Automation, Recovery.</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071423"/><stop offset=".48" stop-color="#102d48"/><stop offset="1" stop-color="#071320"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="#fff0c9"/><stop offset=".24" stop-color="#f4d39b"/><stop offset=".54" stop-color="#d5a760"/><stop offset=".73" stop-color="#f5dcaa"/><stop offset="1" stop-color="#b58445"/></linearGradient>
+ <linearGradient id="tower" x1="0" y1="0" x2=".9" y2=".9"><stop stop-color="#fed9a4"/><stop offset=".18" stop-color="#ac814d"/><stop offset=".58" stop-color="#314059"/><stop offset="1" stop-color="#14243a"/></linearGradient>
+ <linearGradient id="mountain" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#33516d"/><stop offset=".55" stop-color="#14253b"/><stop offset="1" stop-color="#061323"/></linearGradient>
+ <linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#68d9ee" stop-opacity=".06"/><stop offset=".58" stop-color="#79daf0" stop-opacity=".8"/><stop offset="1" stop-color="#eccf89" stop-opacity=".5"/></linearGradient>
+ <radialGradient id="moon"><stop stop-color="#fee2a4" stop-opacity=".3"/><stop offset=".5" stop-color="#5bb5ce" stop-opacity=".10"/><stop offset="1" stop-color="#3e8fb6" stop-opacity="0"/></radialGradient>
+ <filter id="soft"><feGaussianBlur stdDeviation="20"/></filter>
+ <filter id="glow"><feGaussianBlur stdDeviation="5"/></filter>
+ <filter id="titleShadow" x="-15%" y="-30%" width="130%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#060b1a" flood-opacity=".85"/></filter>
+</defs>
+<rect width="1600" height="440" fill="url(#bg)"/>
+<path d="M0 0H1600V235C1300 112 1235 380 960 142S305 315 0 120Z" fill="#16829f" opacity=".075"/>
+<path d="M0 0H1600V110C1280 174 1215 18 984 111C678 219 507 3 0 85Z" fill="#72f3ee" opacity=".075"/>
+<ellipse cx="1244" cy="178" rx="430" ry="240" fill="url(#moon)"/>
+<path d="M720 -90 Q1040 170 1505 5" fill="none" stroke="#5ecaca" stroke-width="85" opacity=".09" filter="url(#soft)"/>
+<path d="M950 -120 Q1162 95 1595 -44" fill="none" stroke="#b2edf3" stroke-width="24" opacity=".17" filter="url(#soft)"/>
+<circle cx="74" cy="27" r="2" fill="#9de9fb" opacity="0.18"/><circle cx="247" cy="106" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="420" cy="185" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="593" cy="264" r="1.15" fill="#e7efff" opacity="0.54"/><circle cx="766" cy="343" r="0.65" fill="#9de9fb" opacity="0.66"/><circle cx="939" cy="17" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="1112" cy="96" r="1.15" fill="#e7efff" opacity="0.30"/><circle cx="1285" cy="175" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="1458" cy="254" r="0.65" fill="#9de9fb" opacity="0.54"/><circle cx="61" cy="333" r="1.15" fill="#e7efff" opacity="0.66"/><circle cx="234" cy="412" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="407" cy="86" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="580" cy="165" r="1.15" fill="#9de9fb" opacity="0.42"/><circle cx="753" cy="244" r="2" fill="#e7efff" opacity="0.54"/><circle cx="926" cy="323" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="1099" cy="402" r="1.15" fill="#e7efff" opacity="0.18"/><circle cx="1272" cy="76" r="0.65" fill="#9de9fb" opacity="0.30"/><circle cx="1445" cy="155" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="48" cy="234" r="1.15" fill="#e7efff" opacity="0.54"/><circle cx="221" cy="313" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="394" cy="392" r="0.65" fill="#9de9fb" opacity="0.18"/><circle cx="567" cy="66" r="1.15" fill="#e7efff" opacity="0.30"/><circle cx="740" cy="145" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="913" cy="224" r="0.65" fill="#e7efff" opacity="0.54"/><circle cx="1086" cy="303" r="1.15" fill="#9de9fb" opacity="0.66"/><circle cx="1259" cy="382" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="1432" cy="56" r="2" fill="#e7efff" opacity="0.30"/><circle cx="35" cy="135" r="1.15" fill="#e7efff" opacity="0.42"/><circle cx="208" cy="214" r="0.65" fill="#9de9fb" opacity="0.54"/><circle cx="381" cy="293" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="554" cy="372" r="1.15" fill="#e7efff" opacity="0.18"/><circle cx="727" cy="46" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="900" cy="125" r="0.65" fill="#9de9fb" opacity="0.42"/><circle cx="1073" cy="204" r="1.15" fill="#e7efff" opacity="0.54"/><circle cx="1246" cy="283" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="1419" cy="362" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="22" cy="36" r="1.15" fill="#9de9fb" opacity="0.30"/><circle cx="195" cy="115" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="368" cy="194" r="0.65" fill="#e7efff" opacity="0.54"/><circle cx="541" cy="273" r="2" fill="#e7efff" opacity="0.66"/><circle cx="714" cy="352" r="0.65" fill="#9de9fb" opacity="0.18"/><circle cx="887" cy="26" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="1060" cy="105" r="1.15" fill="#e7efff" opacity="0.42"/><circle cx="1233" cy="184" r="0.65" fill="#e7efff" opacity="0.54"/><circle cx="1406" cy="263" r="0.65" fill="#9de9fb" opacity="0.66"/><circle cx="1579" cy="342" r="1.15" fill="#e7efff" opacity="0.18"/><circle cx="182" cy="16" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="355" cy="95" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="528" cy="174" r="1.15" fill="#9de9fb" opacity="0.54"/><circle cx="701" cy="253" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="874" cy="332" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="1047" cy="411" r="1.15" fill="#e7efff" opacity="0.30"/><circle cx="1220" cy="85" r="2" fill="#9de9fb" opacity="0.42"/><circle cx="1393" cy="164" r="0.65" fill="#e7efff" opacity="0.54"/><circle cx="1566" cy="243" r="1.15" fill="#e7efff" opacity="0.66"/><circle cx="169" cy="322" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="342" cy="401" r="0.65" fill="#9de9fb" opacity="0.30"/><circle cx="515" cy="75" r="1.15" fill="#e7efff" opacity="0.42"/><circle cx="688" cy="154" r="0.65" fill="#e7efff" opacity="0.54"/><circle cx="861" cy="233" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="1034" cy="312" r="1.15" fill="#9de9fb" opacity="0.18"/><circle cx="1207" cy="391" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="1380" cy="65" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="1553" cy="144" r="1.15" fill="#e7efff" opacity="0.54"/><circle cx="156" cy="223" r="0.65" fill="#9de9fb" opacity="0.66"/><circle cx="329" cy="302" r="2" fill="#e7efff" opacity="0.18"/><circle cx="502" cy="381" r="1.15" fill="#e7efff" opacity="0.30"/><circle cx="675" cy="55" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="848" cy="134" r="0.65" fill="#9de9fb" opacity="0.54"/><circle cx="1021" cy="213" r="1.15" fill="#e7efff" opacity="0.66"/><circle cx="1194" cy="292" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="1367" cy="371" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="1540" cy="45" r="1.15" fill="#9de9fb" opacity="0.42"/><circle cx="143" cy="124" r="0.65" fill="#e7efff" opacity="0.54"/><circle cx="316" cy="203" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="489" cy="282" r="1.15" fill="#e7efff" opacity="0.18"/><circle cx="662" cy="361" r="0.65" fill="#9de9fb" opacity="0.30"/><circle cx="835" cy="35" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="1008" cy="114" r="2" fill="#e7efff" opacity="0.54"/><circle cx="1181" cy="193" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="1354" cy="272" r="0.65" fill="#9de9fb" opacity="0.18"/><circle cx="1527" cy="351" r="1.15" fill="#e7efff" opacity="0.30"/><circle cx="130" cy="25" r="0.65" fill="#e7efff" opacity="0.42"/><circle cx="303" cy="104" r="0.65" fill="#e7efff" opacity="0.54"/><circle cx="476" cy="183" r="1.15" fill="#9de9fb" opacity="0.66"/><circle cx="649" cy="262" r="0.65" fill="#e7efff" opacity="0.18"/><circle cx="822" cy="341" r="0.65" fill="#e7efff" opacity="0.30"/><circle cx="995" cy="15" r="1.15" fill="#e7efff" opacity="0.42"/><circle cx="1168" cy="94" r="0.65" fill="#9de9fb" opacity="0.54"/><circle cx="1341" cy="173" r="0.65" fill="#e7efff" opacity="0.66"/><circle cx="1514" cy="252" r="1.15" fill="#e7efff" opacity="0.18"/><circle cx="117" cy="331" r="2" fill="#e7efff" opacity="0.30"/><circle cx="290" cy="410" r="0.65" fill="#9de9fb" opacity="0.42"/><circle cx="463" cy="84" r="1.15" fill="#e7efff" opacity="0.54"/><circle cx="636" cy="163" r="0.65" fill="#e7efff" opacity="0.66"/>
+<!-- Rune-inspired framing -->
+<g fill="none" stroke="#e0be83" opacity=".24" stroke-width="1.5">
+ <path d="M38 38H1562V402H38Z"/>
+ <path d="M60 60H1540M60 380H1540"/>
+ <path d="M40 90L80 40M1560 90L1520 40M40 351L80 400M1560 351L1520 400"/>
+</g>
+<g opacity=".45" fill="none" stroke="#73d2e9" stroke-width="1.3">
+ <circle cx="1224" cy="228" r="169"/>
+ <circle cx="1224" cy="228" r="192" stroke-dasharray="3 17"/>
+ <path d="M1035 228H1413M1224 43V413"/>
+</g>
+<!-- Floating lightning and gold sun disk -->
+<circle cx="1224" cy="211" r="132" fill="none" stroke="#e9b56f" stroke-width="5" opacity=".4" filter="url(#glow)"/>
+<circle cx="1224" cy="211" r="132" fill="none" stroke="#ecc887" stroke-width="1.8" opacity=".78" stroke-dasharray="115 26 90 47"/>
+<path d="M1073 0L1141 85L1113 86L1186 166L1154 98L1189 99L1122 0" fill="#bbebff" opacity=".28" filter="url(#glow)"/>
+<path d="M1074 0L1126 74L1094 73L1153 151L1128 87L1161 88L1100 0" fill="#b5efff" opacity=".75"/>
+<!-- Dramatic mountain silhouettes -->
+<path d="M0 395L128 282L194 325L269 253L356 344L466 300L574 395Z" fill="url(#mountain)" opacity=".5"/>
+<path d="M905 394L1046 265L1098 298L1164 246L1235 272L1282 196L1343 261L1430 205L1523 294L1600 237V440H905Z" fill="url(#mountain)" opacity=".85"/>
+<path d="M1018 335L1066 285L1098 299L1148 248L1191 281L1260 211L1301 242L1425 211L1461 262" fill="none" stroke="#b8eaff" stroke-width="3" opacity=".19"/>
+<!-- Glowing bridge under fortress -->
+<path d="M1002 369Q1205 287 1518 367" fill="none" stroke="#4bc8e7" stroke-width="18" opacity=".17" filter="url(#glow)"/>
+<path d="M1002 369Q1205 287 1518 367" fill="none" stroke="#aeeeff" stroke-width="2" opacity=".56"/>
+<path d="M1024 377Q1203 318 1495 377" fill="none" stroke="#e4ca88" stroke-width="1.5" opacity=".7"/>
+<!-- Fortress -->
+<path d="M1120 348V259L1173 240V236H1362L1406 260V348Z" fill="#1c2d43" stroke="#bb9867" stroke-opacity=".7" stroke-width="1.5"/>
+<path d="M 1116 348 L 1116 223 L 1135 191 L 1154 223 L 1154 348 Z" fill="url(#tower)" stroke="#f3bb75" stroke-opacity=".54" stroke-width="1.4"/>
+ <path d="M 1128 348 V 268 Q 1135 251 1142 268 V 348" fill="#142a42" opacity=".85"/><path d="M 1166 348 L 1166 183 L 1185 151 L 1204 183 L 1204 348 Z" fill="url(#tower)" stroke="#f3bb75" stroke-opacity=".54" stroke-width="1.4"/>
+ <path d="M 1178 348 V 228 Q 1185 211 1192 228 V 348" fill="#142a42" opacity=".85"/><path d="M 1221 348 L 1221 203 L 1240 171 L 1259 203 L 1259 348 Z" fill="url(#tower)" stroke="#f3bb75" stroke-opacity=".54" stroke-width="1.4"/>
+ <path d="M 1233 348 V 248 Q 1240 231 1247 248 V 348" fill="#142a42" opacity=".85"/><path d="M 1276 348 L 1276 153 L 1295 121 L 1314 153 L 1314 348 Z" fill="url(#tower)" stroke="#f3bb75" stroke-opacity=".54" stroke-width="1.4"/>
+ <path d="M 1288 348 V 198 Q 1295 181 1302 198 V 348" fill="#142a42" opacity=".85"/><path d="M 1336 348 L 1336 208 L 1355 176 L 1374 208 L 1374 348 Z" fill="url(#tower)" stroke="#f3bb75" stroke-opacity=".54" stroke-width="1.4"/>
+ <path d="M 1348 348 V 253 Q 1355 236 1362 253 V 348" fill="#142a42" opacity=".85"/><path d="M 1386 348 L 1386 179 L 1405 147 L 1424 179 L 1424 348 Z" fill="url(#tower)" stroke="#f3bb75" stroke-opacity=".54" stroke-width="1.4"/>
+ <path d="M 1398 348 V 224 Q 1405 207 1412 224 V 348" fill="#142a42" opacity=".85"/><path d="M 1443 348 L 1443 221 L 1462 189 L 1481 221 L 1481 348 Z" fill="url(#tower)" stroke="#f3bb75" stroke-opacity=".54" stroke-width="1.4"/>
+ <path d="M 1455 348 V 266 Q 1462 249 1469 266 V 348" fill="#142a42" opacity=".85"/>
+<path d="M1265 348V286Q1280 260 1295 286V348" fill="#07192a" stroke="#eac48a" stroke-width="2.3"/>
+<path d="M1273 348V295Q1280 283 1287 295V348" fill="#78d9e8" opacity=".24"/>
+<path d="M1130 348H1434" stroke="#d4ad70" stroke-width="3" opacity=".75"/>
+<path d="M1005 348H1530V440H1005Z" fill="#071a2c" opacity=".28"/>
+<!-- Thor-inspired angular crest -->
+<g transform="translate(96 136)">
+ <path d="M40-58L96-26L96 38L40 71L-16 38L-16-26Z" fill="#153c57" opacity=".6" stroke="#71ddec" stroke-width="2.8"/>
+ <path d="M-1-16H77L67 6H47V39L40 49L33 39V6H9Z" fill="url(#gold)"/>
+ <path d="M40-38L52-22L44-7L59-7L40 21L44 0H26L40-22Z" fill="#81e9fa"/>
+ <path d="M-8 55L-26 70M88 55L106 70" fill="none" stroke="#e0c28f" stroke-width="2"/>
+</g>
+<!-- Brand typography -->
+<text x="180" y="228" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="106" letter-spacing="10" fill="#040c15" opacity=".45" dy="7">ASGARD</text>
+<text x="180" y="228" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="106" letter-spacing="10" fill="url(#gold)" filter="url(#titleShadow)">ASGARD</text>
+<path d="M182 253H768" stroke="url(#line)" stroke-width="2"/>
+<text x="183" y="292" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="25" letter-spacing="5.1" fill="#e3edf7">HOME ASSISTANT ADD-ON COLLECTION</text>
+<text x="183" y="335" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="15.8" letter-spacing="4.4" fill="#83d2e8">MCP  •  AUTOMATION  •  RECOVERY  •  UTILITIES</text>
+<path d="M183 364H714" stroke="#6abacc" stroke-width="1.2" opacity=".48"/>
+<text x="185" y="389" font-family="Arial, Helvetica, sans-serif" font-size="13.5" letter-spacing="2.5" fill="#b3cad9">INDEPENDENT PROJECT  /  OPEN SOURCE</text>
+</svg>
