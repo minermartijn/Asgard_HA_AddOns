@@ -13,6 +13,12 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
+    ignore:
+      # Major upgrades (notably MCP SDK 2.x) require manual review and migration.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mcp"
+        versions: [">=2.0.0"]
     groups:
       mcp-dependencies:
         patterns: ["*"]
@@ -21,6 +27,12 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
+    ignore:
+      # Major upgrades (notably MCP SDK 2.x) require manual review and migration.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mcp"
+        versions: [">=2.0.0"]
     groups:
       lifeboat-dependencies:
         patterns: ["*"]
@@ -29,6 +41,12 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
+    ignore:
+      # Major upgrades (notably MCP SDK 2.x) require manual review and migration.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mcp"
+        versions: [">=2.0.0"]
     groups:
       baby-tracker-dependencies:
         patterns: ["*"]
@@ -37,6 +55,12 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
+    ignore:
+      # Major upgrades (notably MCP SDK 2.x) require manual review and migration.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mcp"
+        versions: [">=2.0.0"]
     groups:
       home-stock-dependencies:
         patterns: ["*"]
