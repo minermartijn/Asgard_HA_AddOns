@@ -1,5 +1,7 @@
 # Contributing to HA Full MCP Server
 
+For shared repository policies and test commands, please read [root CONTRIBUTING.md](../CONTRIBUTING.md) first. Report vulnerabilities privately using [SECURITY.md](../SECURITY.md).
+
 Thank you for your interest in contributing! This document provides guidelines and information for contributors.
 
 ## Code of Conduct
@@ -10,7 +12,7 @@ Be respectful, constructive, and collaborative. We're all here to make this proj
 
 ### Reporting Bugs
 
-1. Check if the bug has already been reported in [Issues](https://github.com/yourusername/ha-full-mcp-server/issues)
+1. Check if the bug has already been reported in [Issues](https://github.com/minermartijn/Asgard_HA_AddOns/issues)
 2. If not, create a new issue with:
    - Clear, descriptive title
    - Steps to reproduce
@@ -21,7 +23,7 @@ Be respectful, constructive, and collaborative. We're all here to make this proj
 
 ### Suggesting Features
 
-1. Check [existing feature requests](https://github.com/yourusername/ha-full-mcp-server/issues?q=is%3Aissue+label%3Aenhancement)
+1. Check [existing feature requests](https://github.com/minermartijn/Asgard_HA_AddOns/issues?q=is%3Aissue+label%3Aenhancement)
 2. Create a new issue with:
    - Clear description of the feature
    - Use case and benefits
@@ -61,13 +63,13 @@ Be respectful, constructive, and collaborative. We're all here to make this proj
 
 1. Clone your fork:
    ```bash
-   git clone https://github.com/yourusername/ha-full-mcp-server.git
-   cd ha-full-mcp-server
+   git clone https://github.com/minermartijn/Asgard_HA_AddOns.git
+   cd Asgard_HA_AddOns/ha_full_mcp
    ```
 
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -r ha_full_mcp/requirements.txt
    ```
 
 3. Set environment variables:
@@ -245,9 +247,9 @@ We use [Semantic Versioning](https://semver.org/):
 
 ## Questions?
 
-- Open a [Discussion](https://github.com/yourusername/ha-full-mcp-server/discussions)
+- Open a [Discussion](https://github.com/minermartijn/Asgard_HA_AddOns/discussions)
 - Ask in the [Home Assistant Community](https://community.home-assistant.io/)
-- Check existing [Issues](https://github.com/yourusername/ha-full-mcp-server/issues)
+- Check existing [Issues](https://github.com/minermartijn/Asgard_HA_AddOns/issues)
 
 ## License
 
