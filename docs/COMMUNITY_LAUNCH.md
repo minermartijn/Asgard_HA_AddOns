@@ -1,6 +1,12 @@
-# Home Assistant community announcement drafts
+# Home Assistant community outreach
 
-**Publication status: NOT POSTED.** These drafts are intended for the maintainer to publish and answer questions personally. Do not claim the project has external users or completed demonstrations.
+**Published Home Assistant forum discussion (2026-11-09):** [Two MCP servers for Home Assistant — 62 tools and an independent recovery Lifeboat](https://community.home-assistant.io/t/add-on-two-mcp-servers-for-home-assistant-62-tools-an-independent-recovery-lifeboat/1033525/1).
+
+The forum topic was published by the maintainer. Its view count, replies and independent installation outcomes have **not** been independently verified here.
+
+The text below is retained as the original *draft/reference*, not as an exact copy of the published post. It has not been posted elsewhere by this repository.
+
+## Original announcement drafts
 
 ## Best destination: Home Assistant Community → Share your Projects!
 

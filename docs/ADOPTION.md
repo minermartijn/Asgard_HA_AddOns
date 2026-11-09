@@ -24,6 +24,6 @@ Update only when real evidence becomes available:
 
 | Date | Evidence type | Public link | What it demonstrates |
 | --- | --- | --- | --- |
-| _Not yet recorded_ | — | — | — |
+| 2026-11-09 | Maintainer's public Home Assistant community announcement | [Home Assistant discussion](https://community.home-assistant.io/t/add-on-two-mcp-servers-for-home-assistant-62-tools-an-independent-recovery-lifeboat/1033525/1) | Public sharing and invitation for feedback; **not** evidence of third-party installation or adoption |
 
 This is a manual, privacy-conscious record, not an automated analytics or tracking system.
