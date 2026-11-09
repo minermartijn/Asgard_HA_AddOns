@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-This is a **Home Assistant add-on repository** (`repository.yaml` marks the root). Each top-level folder is a self-contained add-on that Home Assistant builds and runs as a Docker container. There is no monorepo build tool, no CI, and no test suite — add-ons are built by the Home Assistant Supervisor from each folder's `config.yaml` + `Dockerfile`.
+This is a **Home Assistant add-on repository** (`repository.yaml` marks the root). Each top-level folder is a self-contained add-on that Home Assistant builds and runs as a Docker container. There is no monorepo build tool or repository-level CI workflow. Regression tests are present under the MCP add-ons' `tests/` directories. Add-ons are built by the Home Assistant Supervisor from each folder's `config.yaml` + `Dockerfile`.
 
-The three add-ons:
+The four add-ons:
 
 | Folder | Add-on | Stack | Notes |
 |--------|--------|-------|-------|
 | `ha_full_mcp/` | HA Full MCP Server | Python MCP server | The actively-developed one. Modular `src/api/` + `src/tools/` packages. |
-| `ha_addons/` | HA Addon MCP Server | Python MCP server | Older/simpler predecessor of `ha_full_mcp`; flat `src/`, addon-only tools. |
+| `ha_addons/` | HA Addon MCP Server (Lifeboat) | Python MCP server | Independent add-on management and recovery, including single-add-on backup/restore. |
 | `baby_tracker/` | Baby Tracker | FastAPI + SQLite | Ingress web UI, unrelated to MCP. |
+| `home_stock/` | Home Stock | Household inventory app | Inventory and shopping-list tracking with Home Assistant integration. |
 
 ## Critical operational rules (from GEMINI.md)
 
@@ -39,7 +40,7 @@ docker build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19 -t ha
 - `run.sh` is the container entrypoint. In the MCP add-ons it uses `bashio::config` to read options; in `baby_tracker` it parses `/data/options.json` with inline `python3`.
 - `baby_tracker` can also be run directly for UI work: `cd baby_tracker && pip install -r requirements.txt && uvicorn app.main:app --port 8765` (set `DATABASE_URL=sqlite:///./baby.db`).
 
-There are **no tests** in this repo — do not fabricate a test command.
+Regression tests exist under `ha_addons/tests/` and `ha_full_mcp/tests/`. Inspect test imports and dependencies before running them or adding CI; do not claim coverage beyond what the tests actually exercise.
 
 ## MCP server architecture (`ha_full_mcp`, `ha_addons`)
 
@@ -48,9 +49,9 @@ Both MCP add-ons share the same shape; `ha_full_mcp` is the reference implementa
 **Config flow (this trips people up):**
 `config.yaml` options → `run.sh` exports them as env vars via `bashio::config` → `src/config.py` `load_config()` reads env vars into a `ServerConfig`. Per-tool enable/disable flags travel as env vars named `SECTION_TOOLNAME` (e.g. option `addon_information.list_addons` → env `ADDON_INFORMATION_LIST_ADDONS`). `config.py` holds the authoritative `all_tools` map from tool-name → env-var-name and builds `enabled_tools`; **any new tool must be added in three places: `config.yaml` (options + schema), `config.py`'s `all_tools` map, and the tool's definitions module.**
 
-**Transport.** `TRANSPORT=sse` (default) or `stdio`, dispatched in `src/server.py`. SSE mode builds a Starlette + uvicorn app; stdio uses `mcp.server.stdio`.
+**Transport.** The add-on configuration schema accepts `sse`, `stdio`, `streamable-http`, and `all`; review `src/server.py` and `src/routes.py` when changing transport behavior.
 
-**Auth (`src/auth.py`).** API key checked via constant-time compare. Supported carriers: URL path param (`/sse/{api_key}`, `/messages/{api_key}` — preferred, survives Cloudflare proxying), query param, `Authorization: Bearer`, and `X-API-Key`. If no `api_key` option is set, one is generated at startup and printed to the log. CORS is intentionally `allow_origins=["*"]` because every endpoint is key-gated.
+**Auth (`src/auth.py`).** API keys are checked using constant-time comparison. Supported carriers include `Authorization: Bearer`, `X-API-Key`, URL path parameters, and query parameters. Prefer header-based keys where supported; URL keys can leak through access logs and other telemetry. If no `api_key` option is set, one is generated at startup and printed to the log. Review authentication and CORS coverage for every new route; do not assume all endpoints are authenticated (for example, `/health`). See [SECURITY.md](SECURITY.md).
 
 **Tool registration.** `src/mcp_handlers.py` aggregates tool definitions from each `tools/*` module and filters by `enabled_tools`. In `ha_full_mcp` the HA client is split into `src/api/*_api.py` (REST + WebSocket, re-exported through `src/ha_client.py`) and tool handlers into `src/tools/<domain>/`. Tool schema arrays must include `items` on array-typed params (a recurring bug fixed in v1.9.0).
 
