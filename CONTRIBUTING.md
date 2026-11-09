@@ -20,7 +20,7 @@ Thanks for helping improve these projects. This repository is maintained by an i
 ## Development workflow
 
 1. Fork the repository and branch from `main`.
-2. Read `AGENTS.md` plus the appropriate README and changelog.
+2. Read [the maintainer guide](docs/MAINTAINING.md) plus the appropriate README and changelog.
 3. For Python code, create a virtual environment and install the affected add-on's `requirements.txt`.
 4. Run `python -m compileall -q baby_tracker home_stock ha_addons/src ha_full_mcp/src` from the repository root.
 5. For MCP changes, run `python -m unittest discover -s ha_full_mcp/tests -p 'test_*.py' -v` and/or `python -m unittest discover -s ha_addons/tests -p 'test_*.py' -v`. The tests require the relevant add-on dependencies and `httpx-sse`; some Lifeboat tests start local HTTP servers.
@@ -32,7 +32,7 @@ Do not claim a test passed unless you ran it. If a check fails, include the fail
 
 ## Commit attribution
 
-Commits should use the contributor's own identity. AI tools are not added as commit co-authors, but retain attribution for any real human contributors. See [AGENTS.md](AGENTS.md).
+Commits should use the contributor's real identity and preserve legitimate human contributions. See the [maintainer guide](docs/MAINTAINING.md) for commit and release conventions.
 
 ## Releases
 
@@ -40,4 +40,4 @@ Each add-on is versioned separately; see [Releasing](docs/RELEASING.md). Do not 
 
 ## License
 
-This repository's proposed root MIT license covers original code owned by the maintainer. Contributions are submitted under that license unless otherwise agreed. Third-party dependencies and assets retain their own licenses.
+This repository's root MIT license covers original code owned by the maintainer. Contributions are submitted under that license unless otherwise agreed. Third-party dependencies and assets retain their own licenses.
