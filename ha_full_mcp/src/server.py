@@ -69,7 +69,7 @@ async def run_sse_server(config, ha_client):
     
     # Register MCP handlers with enabled tools filter
     server.list_tools()(create_list_tools_handler(ha_client, config.enabled_tools))
-    server.call_tool()(create_call_tool_handler(ha_client))
+    server.call_tool()(create_call_tool_handler(ha_client, config.enabled_tools))
     server.list_resources()(create_list_resources_handler())
     server.read_resource()(create_read_resource_handler())
     
@@ -150,7 +150,7 @@ async def run_sse_server(config, ha_client):
     logger.info(f"MCP Streamable HTTP endpoint: http://{config.host}:{config.port}/mcp")
     
     # Get tool count
-    tools = await create_list_tools_handler(ha_client)()
+    tools = await create_list_tools_handler(ha_client, config.enabled_tools)()
     logger.info(f"Available tools: {len(tools)}")
     
     # Run the server
@@ -176,7 +176,7 @@ async def run_stdio_server(config, ha_client):
     
     # Register MCP handlers with enabled tools filter
     server.list_tools()(create_list_tools_handler(ha_client, config.enabled_tools))
-    server.call_tool()(create_call_tool_handler(ha_client))
+    server.call_tool()(create_call_tool_handler(ha_client, config.enabled_tools))
     server.list_resources()(create_list_resources_handler())
     server.read_resource()(create_read_resource_handler())
     
