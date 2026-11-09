@@ -3,10 +3,11 @@
 This list describes proposed improvements, not promises or completed work. Priorities reflect maintainability and practical user value.
 
 ## Engineering
-- [ ] Establish CI with Python syntax, manifest validation and both MCP regression suites.
-- [ ] Verify test suites pass in GitHub Actions; fix or isolate flaky network tests based on evidence.
+- [x] Establish CI with Python syntax, manifest validation and both MCP regression suites.
+- [x] Verify existing MCP regression suites pass in GitHub Actions (2026-11-09). Continue monitoring future compatibility and intermittent failures.
 - [ ] Investigate whether Supervisor admin permissions and `SYS_ADMIN` can be reduced without impairing intended tools.
-- [ ] Add authentication/authorization regression tests for protected MCP routes.
+- [x] Add Full MCP tool-allowlist execution and logging regression tests.
+- [ ] Add route-level authentication and authorization regression tests for the full set of protected MCP endpoints.
 - [ ] Add release smoke tests against a disposable Home Assistant test environment.
 - [ ] Publish independently tagged GitHub Releases for each add-on after validation.
 
@@ -23,7 +24,7 @@ This list describes proposed improvements, not promises or completed work. Prior
 - [ ] Triage issues and publish changelogs for meaningful updates.
 - [ ] Accept focused external contributions and maintain visible review history.
 
-## Sponsorship evidence
+## Project usage and maintenance evidence
 
 Measure what actually occurs: external issues, reproducible bugs fixed, merged human contributions, documented deployments, and citations from third-party projects. Do **not** manufacture stars, forks, installs, downloads, reviews or contributions.
 
