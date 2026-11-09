@@ -55,6 +55,7 @@ You need a Home Assistant installation that supports the **add-on store** (for e
 - [Full MCP usage and tool reference](ha_full_mcp/README.md)
 - [Lifeboat installation, limitations and recovery](ha_addons/README.md)
 - [Architecture and trust boundaries](docs/ARCHITECTURE.md)
+- [Compare all 62 Full MCP and 22 Lifeboat tools](docs/MCP_TOOLS.md)
 - [Reproducible recovery demonstration plan](docs/DEMO.md) — no published demo recording yet
 - [Contributing and running regression tests](CONTRIBUTING.md)
 - [Development and maintainer guide](docs/MAINTAINING.md)
