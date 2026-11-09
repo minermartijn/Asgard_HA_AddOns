@@ -29,6 +29,12 @@ To add these addons to your Home Assistant instance:
    `https://github.com/minermartijn/Asgard_HA_AddOns`
 7. Once added, the addons will appear in the "Local Add-ons" or "Asgard Home Assistant Addons" section.
 
+## Security
+
+The MCP add-ons provide high-privilege access to Home Assistant. Please read the [security policy](SECURITY.md) before enabling remote access. Prefer authenticated connections over HTTPS/VPN and avoid putting API keys in URLs when header authentication is available.
+
+If you discover a security issue, follow the private reporting instructions in [SECURITY.md](SECURITY.md); do not post credentials or exploit details in public issues.
+
 ## Development
 
 All addons are developed following the official Home Assistant Add-on standards but using generic base images to ensure compatibility across local development environments.
