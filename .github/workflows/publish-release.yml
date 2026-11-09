@@ -1,0 +1,73 @@
+name: Publish an add-on release
+
+on:
+  workflow_dispatch:
+    inputs:
+      addon:
+        description: Add-on folder to release
+        required: true
+        type: choice
+        options:
+          - ha_full_mcp
+          - ha_addons
+          - baby_tracker
+          - home_stock
+      version:
+        description: Exact version from the add-on config.yaml (for example 1.11.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate the version and derive tag
+        env:
+          ADDON: ${{ inputs.addon }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          python -m pip install --disable-pip-version-check 'PyYAML>=6,<7'
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          import yaml
+          addon = os.environ["ADDON"]
+          version = os.environ["VERSION"]
+          prefixes = {"ha_full_mcp": "ha-full-mcp", "ha_addons": "ha-lifeboat", "baby_tracker": "baby-tracker", "home_stock": "home-stock"}
+          if addon not in prefixes or not re.fullmatch(r"\d+\.\d+\.\d+", version):
+              raise SystemExit("Invalid add-on or release version")
+          config = yaml.safe_load((Path(addon) / "config.yaml").read_text(encoding="utf-8"))
+          if str(config["version"]) != version:
+              raise SystemExit(f"Version mismatch: manifest={config['version']} requested={version}")
+          tag = f"{prefixes[addon]}-v{version}"
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              env.write(f"RELEASE_TAG={tag}\nRELEASE_TITLE={config['name']} v{version}\n")
+          print(f"Ready to publish: {tag}")
+          PY
+      - name: Reject existing tag or release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists: $RELEASE_TAG"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $RELEASE_TAG"
+            exit 1
+          fi
+      - name: Create tagged GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "$RELEASE_TITLE" --generate-notes
