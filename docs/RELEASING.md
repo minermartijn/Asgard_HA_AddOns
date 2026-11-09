@@ -2,14 +2,14 @@
 
 Each add-on in this repository has its own version in its folder's `config.yaml`. Do **not** assign one version to the entire repository.
 
-| Add-on | Folder | Suggested GitHub release tag |
+| Add-on | Folder | GitHub release tag |
 | --- | --- | --- |
 | Full MCP | `ha_full_mcp` | `ha-full-mcp-v1.11.1` |
 | Lifeboat | `ha_addons` | `ha-lifeboat-v1.4.0` |
 | Baby Tracker | `baby_tracker` | `baby-tracker-v1.0.5` |
 | Home Stock | `home_stock` | `home-stock-v1.0.0` |
 
-These are **proposed initial release tags**, not an assertion that releases are already published.
+**Published initial releases (2026-11-09):** `ha-full-mcp-v1.11.1` and `ha-lifeboat-v1.4.0`. The Baby Tracker and Home Stock tags remain proposals until verified and published.
 
 ## Checklist before publishing
 
@@ -22,8 +22,8 @@ These are **proposed initial release tags**, not an assertion that releases are 
 7. Test an update from the previous installed version on a non-critical Home Assistant environment. Verify the Lifeboat recovery route for Full MCP changes.
 8. If publishing fails, do not retag a different commit under the same published version without documenting the correction.
 
-No tags or GitHub Releases are created automatically by this documentation.
+Publication is managed by the manual [Publish an add-on release workflow](../.github/workflows/publish-release.yml). Publishing releases does not deploy add-ons to Home Assistant.
 
 ## Suggested next step
 
-After CI has run successfully and the existing versions have been verified on Home Assistant, publish the four initial releases. Future releases should be driven by genuine version changes, not GitHub activity.
+Initial GitHub Releases are published for both MCP add-ons. Baby Tracker and Home Stock still need independent installation and behavior verification before their first tagged releases. Future releases should be driven by genuine version changes, not GitHub activity.
