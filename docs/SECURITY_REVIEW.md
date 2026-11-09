@@ -2,13 +2,13 @@
 
 **Scope:** Lightweight source-level review performed on 2026-11-09. Not a penetration test, threat-model workshop, or independent security audit.
 
-## Confirmed and addressed in the related security PR
+## Confirmed and fixed in Full MCP v1.11.1 source
 
 - **Full MCP tool toggle bypass:** The tool list was filtered by `enabled_tools`, but the call handler did not recheck the configured allowlist. The fix passes the same allowlist to the handler and denies disabled tool calls before routing.
 - **Sensitive argument logging:** Full MCP logged entire tool-call arguments. The fix logs tool names only, rather than potentially exposing passwords or tokens.
 - **Regression coverage:** Unit tests verify disabled and allowed calls, an empty allowlist, list consistency, and that a test secret does not appear in handler logs.
 
-**Deployment caution:** These changes do not take effect on Home Assistant until the code PR is merged and the Full MCP add-on is rebuilt/updated.
+**Deployment caution:** The fix is merged into the repository's Full MCP v1.11.1 source. Running Home Assistant installations must update/rebuild the add-on separately for it to take effect.
 
 ## Remaining hardening opportunities
 

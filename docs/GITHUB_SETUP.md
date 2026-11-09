@@ -1,6 +1,6 @@
 # GitHub profile and repository settings checklist
 
-Some GitHub settings cannot be changed by this connector. Use the following exact values and actions after merging the documentation PR.
+Some GitHub settings require repository-owner configuration in the GitHub web interface. The profile, repository metadata, security toggles and release publication steps below are not automatically completed by documentation changes.
 
 ## Public profile README
 
