@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security issues - private reporting guidance
+    url: https://github.com/minermartijn/Asgard_HA_AddOns/blob/main/SECURITY.md
+    about: Do not disclose vulnerabilities or secrets in public issues.

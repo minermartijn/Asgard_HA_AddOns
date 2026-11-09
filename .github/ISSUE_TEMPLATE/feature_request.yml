@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an improvement to an existing add-on
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: addon
+    attributes:
+      label: Add-on
+      options:
+        - HA Full MCP Server
+        - Lifeboat MCP Server
+        - Baby Tracker
+        - Home Stock
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What real need would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

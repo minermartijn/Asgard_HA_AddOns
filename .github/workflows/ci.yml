@@ -1,0 +1,58 @@
+name: Quality checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-validation:
+    name: Python syntax and add-on manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Check Python syntax
+        run: python -m compileall -q baby_tracker home_stock ha_addons/src ha_full_mcp/src
+      - name: Validate add-on metadata
+        run: |
+          python -m pip install --disable-pip-version-check 'PyYAML>=6,<7'
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for folder in ("ha_full_mcp", "ha_addons", "baby_tracker", "home_stock"):
+              manifest = Path(folder) / "config.yaml"
+              data = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+              for required in ("name", "version", "slug", "arch"):
+                  assert data.get(required), f"{manifest}: missing {required}"
+              assert (Path(folder) / "Dockerfile").exists(), f"{folder}: missing Dockerfile"
+              print(f"{folder}: {data['name']} v{data['version']}")
+          PY
+
+  mcp-regressions:
+    name: MCP regressions (${{ matrix.addon }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        addon: [ha_full_mcp, ha_addons]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ${{ matrix.addon }}/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r "${{ matrix.addon }}/requirements.txt" 'httpx-sse>=0.4,<1'
+      - name: Run regression suite
+        run: python -m unittest discover -s "${{ matrix.addon }}/tests" -p 'test_*.py' -v
