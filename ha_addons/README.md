@@ -143,7 +143,7 @@ It's honestly pretty convenient once you get used to it.
 
 The addon uses an API key to make sure only you (or your AI assistant) can control things. Keep that key private - anyone with it can manage your addons.
 
-If you're exposing this through Cloudflare or another proxy, the addon handles authentication properly so it'll work fine. The API key gets embedded in the URL path, which survives proxy forwarding.
+If you connect through Cloudflare or another reverse proxy, use HTTPS and an additional access restriction or authentication layer. Prefer sending the API key in a request header where supported. Path-based and query-string keys are supported for compatibility, but they can appear in proxy logs, copied URLs, browser history, and monitoring data. Protect those records and rotate exposed keys. Avoid directly exposing port 8015 to the public internet. See the [repository security policy](../SECURITY.md).
 
 ## Troubleshooting
 
