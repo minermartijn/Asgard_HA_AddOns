@@ -41,3 +41,10 @@ This workspace is a dedicated Home Assistant Addon Repository containing multipl
 ## Repository Information
 - **URL**: `https://github.com/minermartijn/Asgard_HA_AddOns`
 - **Maintainer**: minermartijn
+
+## Commit authorship and AI tooling
+
+- Use the repository owner's configured Git author/committer identity for commits when acting under their account. Never impersonate unrelated people.
+- **Do not add AI tools, assistant names, or orchestrators as commit co-authors.** Omit `Co-Authored-By` trailers for Claude, Paperclip, Codex, Gemini, and other AI agents.
+- Do not append assistant-specific session URLs or identifiers (for example, `Claude-Session:`) to commit messages.
+- This is a commit-message convention for future work only; it does not alter existing Git history.
