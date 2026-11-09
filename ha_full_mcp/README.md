@@ -240,7 +240,7 @@ Home Assistant 2024.x includes a built-in MCP server. Here's how this addon comp
 | Automation CRUD | ❌ | ✅ 8 tools |
 | Dashboard Management | ❌ | ✅ 4 tools |
 | Configuration Files | ❌ | ✅ Read/Write |
-| Total Tools | ~10 | 59 |
+| Total Tools | Varies by version | 62 (documented) |
 | Setup | OAuth required | Simple API key |
 
 **Use this addon if you want:**
@@ -295,7 +295,9 @@ For security, you can disable specific tools in the addon configuration UI. This
 - The addon listens on all interfaces by default (`0.0.0.0`)
 - Use a firewall to restrict access if exposed to the internet
 - Consider using a reverse proxy with additional authentication
-- The API key is embedded in the URL for proxy compatibility
+- Prefer API keys in request headers where your MCP client supports them.
+- Path-based and query-string API keys are supported for compatibility but can leak through proxy logs, browser history, or telemetry. If you use them, protect access logs and rotate exposed keys.
+- Do not expose the MCP port directly to the internet; use TLS and a restricted access gateway or VPN. See the [repository security policy](../SECURITY.md).
 
 ## Troubleshooting
 
@@ -328,7 +330,7 @@ For security, you can disable specific tools in the addon configuration UI. This
 ### Getting Help
 
 1. Check the addon logs
-2. Search [existing issues](https://github.com/yourusername/ha-full-mcp-server/issues)
+2. Search [existing issues](https://github.com/minermartijn/Asgard_HA_AddOns/issues)
 3. Open a [new issue](https://github.com/yourusername/ha-full-mcp-server/issues/new) with logs
 
 ## Contributing
