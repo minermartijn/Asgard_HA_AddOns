@@ -191,10 +191,10 @@ Once connected, you can have natural conversations with your AI assistant:
 
 **App Management:**
 ```
-"What addons do I have installed?"
-"Install the ESPHome addon"
-"The Node-RED addon isn't working, check the logs"
-"Update all my addons"
+"What apps do I have installed?"
+"Install the ESPHome app"
+"The Node-RED app isn't working, check the logs"
+"Update all my apps"
 ```
 
 **Device Control:**
