@@ -4,12 +4,12 @@ Independent developer and hobbyist programmer from the Netherlands. I enjoy turn
 
 ## What I'm building
 
-**[Asgard Home Assistant Add-ons](https://github.com/minermartijn/Asgard_HA_AddOns)** — Four open development projects, including:
+**[Asgard Home Assistant Apps](https://github.com/minermartijn/Asgard_HA_AddOns)** — Four open development projects, including:
 
 - **Full Home Assistant MCP server:** An interface that lets compatible assistants inspect and manage Home Assistant through MCP.
-- **Lifeboat MCP server:** A separate add-on management path to help diagnose and recover a failed primary MCP add-on.
+- **Lifeboat MCP server:** A separate app management path to help diagnose and recover a failed primary MCP app.
 - **Home Stock:** Household inventory and shopping list integration.
-- **Baby Tracker:** A Home Assistant add-on for everyday tracking.
+- **Baby Tracker:** A Home Assistant app for everyday tracking.
 
 I also maintain Home Assistant experiments and small utilities such as [MyMonitor](https://github.com/minermartijn/MyMonitor) and [MyCurl](https://github.com/minermartijn/MyCurl).
 
