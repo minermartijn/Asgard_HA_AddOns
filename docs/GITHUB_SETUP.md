@@ -14,7 +14,7 @@ GitHub shows a README on your profile only when you create a **public repository
 
 Proposed description:
 
-> Home Assistant add-ons with MCP servers for AI-assisted control and independent recovery, plus household utilities.
+> Home Assistant apps with MCP servers for AI-assisted control and independent recovery, plus household utilities.
 
 Suggested topics (choose those accurately describing the project):
 
@@ -31,4 +31,4 @@ Update these under the repository About panel using its gear icon. No claim is m
 
 ## Releases
 
-See [RELEASING.md](RELEASING.md); do not publish initial GitHub Releases until each published add-on version has been verified on a test installation.
+See [RELEASING.md](RELEASING.md); do not publish initial GitHub Releases until each published app version has been verified on a test installation.
