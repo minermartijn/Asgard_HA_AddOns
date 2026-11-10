@@ -18,8 +18,8 @@ Be respectful, constructive, and collaborative. We're all here to make this proj
    - Steps to reproduce
    - Expected vs actual behavior
    - Home Assistant version
-   - Addon version
-   - Relevant logs from the addon
+   - App version
+   - Relevant logs from the app
 
 ### Suggesting Features
 
@@ -87,7 +87,7 @@ Be respectful, constructive, and collaborative. We're all here to make this proj
 
 Test your changes with a real Home Assistant instance:
 
-1. Install the addon in Home Assistant
+1. Install the app in Home Assistant
 2. Configure it with your changes
 3. Test all affected tools through an MCP client
 4. Verify error handling with invalid inputs
