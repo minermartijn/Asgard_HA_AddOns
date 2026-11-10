@@ -9,7 +9,7 @@ Show why a separate recovery MCP server is useful: when Full MCP is intentionall
 ## Preparation
 
 1. Use a non-critical Home Assistant OS/Supervised test installation, never a production system with safety-critical devices.
-2. Install both add-ons using [the repository installation instructions](../README.md).
+2. Install both apps using [the repository installation instructions](../README.md).
 3. Confirm both endpoints work with **distinct dummy/test credentials** and a local test network. Use TLS if access crosses a trusted boundary.
 4. Prepare a known-good Home Assistant backup and independent access to the Supervisor UI; verify the backup is accessible.
 5. Remove private entity names, addresses, user data, internal URLs, and secrets from the recording environment.
@@ -22,7 +22,7 @@ Show why a separate recovery MCP server is useful: when Full MCP is intentionall
 4. **Fallback:** Connect to Lifeboat using its independent MCP endpoint and call `get_addon_info` / `get_addon_logs` for Full MCP.
 5. **Recovery:** Use Lifeboat `start_addon` or `restart_addon` to restore Full MCP. Avoid destructive operations in the demonstration.
 6. **Verification:** Confirm Full MCP responds to a read-only request after restart.
-7. **Boundary:** Explain that this only covers a failing add-on, not a failed host, Supervisor, or network.
+7. **Boundary:** Explain that this only covers a failing app, not a failed host, Supervisor, or network.
 
 ## Safety checks before publishing
 
