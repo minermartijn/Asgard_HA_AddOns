@@ -12,25 +12,25 @@ The text below is retained as the original *draft/reference*, not as an exact co
 
 **Forum category:** https://community.home-assistant.io/c/projects/9
 
-The official Home Assistant app-development documentation recommends this category for introducing community-developed add-ons. Don't submit these MCP servers as "Custom Integrations" — they are Supervisor add-ons.
+The official Home Assistant app-development documentation recommends this category for introducing community-developed apps. Don't submit these MCP servers as "Custom Integrations" — they are Supervisor apps.
 
 ### Suggested topic title
 
-**[Add-on] Two MCP servers for Home Assistant: 62 tools + an independent 22-tool recovery Lifeboat**
+**[App] Two MCP servers for Home Assistant: 62 tools + an independent 22-tool recovery Lifeboat**
 
 ### Ready-to-edit forum post
 
 Hey everyone!
 
-I've been building a couple of Home Assistant add-ons to connect MCP-compatible AI assistants to my Home Assistant installation. I wanted to share them and get feedback from people who also use MCP or automate their Home Assistant setup.
+I've been building a couple of Home Assistant apps to connect MCP-compatible AI assistants to my Home Assistant installation. I wanted to share them and get feedback from people who also use MCP or automate their Home Assistant setup.
 
 There are **two separate servers**, and that is intentional:
 
-**1. HA Full MCP Server (v1.11.1)** — **62 tools on port 8010**, covering entities, services, integrations, automations, dashboards, diagnostics, registry inventory, backups and add-on management. It's the everyday management connection.
+**1. HA Full MCP Server (v1.11.1)** — **62 tools on port 8010**, covering entities, services, integrations, automations, dashboards, diagnostics, registry inventory, backups and app management. It's the everyday management connection.
 
-**2. HA Addon MCP Server / Lifeboat (v1.4.0)** — **22 tools on port 8015**, limited to add-on/Supervisor operations: logs, start/stop/restart, updates, reinstall/rebuild, configuration, and targeted single-add-on backups and restores.
+**2. HA Addon MCP Server / Lifeboat (v1.4.0)** — **22 tools on port 8015**, limited to app/Supervisor operations: logs, start/stop/restart, updates, reinstall/rebuild, configuration, and targeted single-app backups and restores.
 
-**Why two?** If the assistant updates or restarts the Full MCP add-on and that service fails to come back, it loses its own primary connection. Lifeboat runs as a separate add-on with its own endpoint and credentials. As long as the host, network, Supervisor and Lifeboat are still running, the assistant can switch to Lifeboat to inspect logs and attempt a recovery.
+**Why two?** If the assistant updates or restarts the Full MCP app and that service fails to come back, it loses its own primary connection. Lifeboat runs as a separate app with its own endpoint and credentials. As long as the host, network, Supervisor and Lifeboat are still running, the assistant can switch to Lifeboat to inspect logs and attempt a recovery.
 
 It is **not automatic failover**, and it won't help if the entire host or Supervisor goes down.
 
@@ -38,9 +38,9 @@ It is **not automatic failover**, and it won't help if the entire host or Superv
 
 ![Two MCP servers in Home Assistant](https://raw.githubusercontent.com/minermartijn/Asgard_HA_AddOns/main/docs/assets/asgard-mcp-architecture.svg)
 
-**Features:** SSE + Streamable HTTP, independent add-ons, configurable tool permissions on Full MCP, and support for `amd64` and `aarch64`.
+**Features:** SSE + Streamable HTTP, independent apps, configurable tool permissions on Full MCP, and support for `amd64` and `aarch64`.
 
-**Installation:** Add this repository through Home Assistant's add-on store's custom repositories, then install either or both add-ons:
+**Installation:** Add this repository through Home Assistant's App store's custom repositories, then install either or both apps:
 
 https://github.com/minermartijn/Asgard_HA_AddOns
 
@@ -48,29 +48,29 @@ https://github.com/minermartijn/Asgard_HA_AddOns
 
 **Security note:** Both servers can perform high-privilege actions. Please **don't expose their ports directly to the internet**. Use a trusted network/VPN or secured access gateway, protect credentials, and require human approval before destructive operations. Lifeboat is a recovery helper, not a backup replacement.
 
-Both add-ons work in my own installation, and the existing regression tests are passing. I haven't yet tested all combinations of clients and Home Assistant installations.
+Both apps work in my own installation, and the existing regression tests are passing. I haven't yet tested all combinations of clients and Home Assistant installations.
 
 I'd especially like feedback on:
 - Whether the separate Lifeboat is useful for your setup.
-- Which MCP clients you're using and how they handle reconnects after add-on restarts.
+- Which MCP clients you're using and how they handle reconnects after app restarts.
 - Anything missing from the tool catalogs or installation instructions.
 
 Happy to hear suggestions, bug reports or contributions.
 
 ## Shorter Reddit version
 
-**Suggested title:** I built two Home Assistant MCP add-ons — one with 62 tools, another as a separate recovery Lifeboat
+**Suggested title:** I built two Home Assistant MCP apps — one with 62 tools, another as a separate recovery Lifeboat
 
 I ran into a practical problem: if an AI assistant restarts/updates the MCP server it's connected through and that service fails to return, the assistant can't use that connection to fix it.
 
-I built two separate Home Assistant add-ons:
+I built two separate Home Assistant apps:
 
-- **Full MCP (v1.11.1)** — 62 tools for entities, automations, backups, dashboards, integrations, add-ons and diagnostics (port 8010).
-- **Lifeboat MCP (v1.4.0)** — 22 add-on/Supervisor tools for logs, updates, restart/rebuild, and targeted backup/restore (port 8015).
+- **Full MCP (v1.11.1)** — 62 tools for entities, automations, backups, dashboards, integrations, apps and diagnostics (port 8010).
+- **Lifeboat MCP (v1.4.0)** — 22 app/Supervisor tools for logs, updates, restart/rebuild, and targeted backup/restore (port 8015).
 
 A client can configure both as independent MCP connections, so Lifeboat may still be usable if Full MCP crashes. It doesn't help if Home Assistant's host/Supervisor/network is down, and the switch isn't automatic.
 
-Both currently work in my own HA installation. Available as open-source add-ons here:
+Both currently work in my own HA installation. Available as open-source apps here:
 
 https://github.com/minermartijn/Asgard_HA_AddOns
 
@@ -82,7 +82,7 @@ I'd love feedback from anyone running MCP alongside Home Assistant, particularly
 
 ## Additional developer-focused venue
 
-The Home Assistant Discord **#developers** channel is useful for asking concrete technical questions about add-on design. Ask a focused question about Supervisor recovery and add-on isolation rather than pasting the entire promotional post. The official Home Assistant Contributors pages explain how to join the relevant channels.
+The Home Assistant Discord **#developers** channel is useful for asking concrete technical questions about app design. Ask a focused question about Supervisor recovery and app isolation rather than pasting the entire promotional post. The official Home Assistant Contributors pages explain how to join the relevant channels.
 
 ## Maintenance expectations
 
