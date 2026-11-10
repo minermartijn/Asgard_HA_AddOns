@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible, non-security problem in an add-on
+description: Report a reproducible, non-security problem in an app
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -9,7 +9,7 @@ body:
   - type: dropdown
     id: addon
     attributes:
-      label: Affected add-on
+      label: Affected app
       options:
         - HA Full MCP Server
         - Lifeboat MCP Server
@@ -20,7 +20,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Add-on version
+      label: App version
       placeholder: "e.g. 1.11.0"
     validations:
       required: true
