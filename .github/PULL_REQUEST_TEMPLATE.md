@@ -1,6 +1,6 @@
 ## What changed?
 
-- Add-on(s):
+- App(s):
 - Summary:
 
 ## Why?
