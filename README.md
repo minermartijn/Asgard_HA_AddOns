@@ -4,7 +4,7 @@
 
 [![Quality checks](https://github.com/minermartijn/Asgard_HA_AddOns/actions/workflows/ci.yml/badge.svg)](https://github.com/minermartijn/Asgard_HA_AddOns/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Add--ons-41BDF5)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Apps-41BDF5)](https://www.home-assistant.io/)
 
 **A collection of independently versioned Home Assistant apps**, with two MCP servers for AI-assisted home automation and app recovery, plus household utilities. Developed and maintained by [minermartijn](https://github.com/minermartijn).
 
@@ -48,7 +48,7 @@ flowchart LR
     Full --> Core["HA Core API"]
     Full --> Supervisor["HA Supervisor API"]
     Life --> Supervisor
-    Supervisor -->|"Recover primary add-on"| Full
+    Supervisor -->|"Recover primary app"| Full
 ```
 
 This is not a replacement for conventional backups: Lifeboat cannot fix a failed host, broken Supervisor, or lost network. Read the [architecture and limitations](docs/ARCHITECTURE.md).
