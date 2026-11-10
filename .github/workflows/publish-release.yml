@@ -1,9 +1,9 @@
-name: Publish an app release
+name: Publish a Home Assistant app release
 
 on:
   workflow_dispatch:
     inputs:
-      app:
+      addon:
         description: App folder to release
         required: true
         type: choice
@@ -33,7 +33,7 @@ jobs:
           python-version: '3.12'
       - name: Validate the version and derive tag
         env:
-          APP: ${{ inputs.app }}
+          ADDON: ${{ inputs.addon }}
           VERSION: ${{ inputs.version }}
         run: |
           python -m pip install --disable-pip-version-check 'PyYAML>=6,<7'
@@ -42,15 +42,15 @@ jobs:
           import re
           from pathlib import Path
           import yaml
-          app = os.environ["APP"]
+          addon = os.environ["ADDON"]
           version = os.environ["VERSION"]
           prefixes = {"ha_full_mcp": "ha-full-mcp", "ha_addons": "ha-lifeboat", "baby_tracker": "baby-tracker", "home_stock": "home-stock"}
-          if app not in prefixes or not re.fullmatch(r"\d+\.\d+\.\d+", version):
-              raise SystemExit("Invalid app or release version")
-          config = yaml.safe_load((Path(app) / "config.yaml").read_text(encoding="utf-8"))
+          if addon not in prefixes or not re.fullmatch(r"\d+\.\d+\.\d+", version):
+              raise SystemExit("Invalid add-on or release version")
+          config = yaml.safe_load((Path(addon) / "config.yaml").read_text(encoding="utf-8"))
           if str(config["version"]) != version:
               raise SystemExit(f"Version mismatch: manifest={config['version']} requested={version}")
-          tag = f"{prefixes[app]}-v{version}"
+          tag = f"{prefixes[addon]}-v{version}"
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
               env.write(f"RELEASE_TAG={tag}\nRELEASE_TITLE={config['name']} v{version}\n")
           print(f"Ready to publish: {tag}")
