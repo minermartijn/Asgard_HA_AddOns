@@ -4,7 +4,7 @@
 
 The forum topic was published by the maintainer. Its view count, replies and independent installation outcomes have **not** been independently verified here.
 
-The text below is retained as the original *draft/reference*, not as an exact copy of the published post. It has not been posted elsewhere by this repository.
+The text below is a terminology-updated *draft/reference*, not an exact copy of the published post. It has not been posted elsewhere by this repository.
 
 ## Original announcement drafts
 
