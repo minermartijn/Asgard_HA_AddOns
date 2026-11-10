@@ -8,9 +8,9 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ## What is this?
 
-This addon transforms your Home Assistant into an MCP server, allowing AI assistants like Claude, Kiro, or any MCP-compatible tool to:
+This app transforms your Home Assistant into an MCP server, allowing AI assistants like Claude, Kiro, or any MCP-compatible tool to:
 
-- **Manage addons** - Install, configure, update, and troubleshoot
+- **Manage apps** - Install, configure, update, and troubleshoot
 - **Control devices** - Turn on lights, adjust thermostats, trigger scenes
 - **System administration** - Backups, configuration, logs, diagnostics
 - **Automation** - Create, modify, and manage automations
@@ -20,8 +20,8 @@ All through simple, natural language conversations with your AI assistant.
 
 ## Features
 
-### 🔧 Complete Addon Management (22 tools)
-Install, uninstall, start, stop, restart, update, configure, and troubleshoot addons. Browse the addon store, check compatibility, rebuild custom addons, and view logs.
+### 🔧 Complete App Management (22 tools)
+Install, uninstall, start, stop, restart, update, configure, and troubleshoot apps. Browse the app store, check compatibility, rebuild custom apps, and view logs.
 
 ### 💾 Backup & Restore (5 tools)
 Create full or partial backups with encryption, list and inspect backups, restore from any backup, and manage backup storage.
@@ -53,16 +53,16 @@ Read and write configuration files, validate configuration before restarting, vi
 
 ### 1. Add the Repository
 
-Add this repository to your Home Assistant addon store:
+Add this repository to your Home Assistant app store:
 
 ```
 https://github.com/minermartijn/Asgard_HA_AddOns
 ```
 
-### 2. Install the Addon
+### 2. Install the App
 
-1. Navigate to **Settings** → **Add-ons** → **Add-on Store**
-2. Find "HA Full MCP Server" in the list
+1. Navigate to **Settings** → **Apps** → **Install app**
+2. If this repository is not already added, open **⋮ → Repositories** and add its URL. Then find "HA Full MCP Server" in the list
 3. Click **Install**
 
 ### 3. Configure
@@ -78,7 +78,7 @@ https://github.com/minermartijn/Asgard_HA_AddOns
 2. Scroll to **Long-Lived Access Tokens**
 3. Click **Create Token**
 4. Give it a name like "MCP Server"
-5. Copy the token and paste it into the addon configuration
+5. Copy the token and paste it into the app configuration
 
 ### 4. Start
 
@@ -99,7 +99,7 @@ port: 8010                                 # Port number (default: 8010)
 
 ### Tool Toggles
 
-Every tool can be individually enabled or disabled in the addon configuration UI. All tools are enabled by default. You can disable specific tools for security:
+Every tool can be individually enabled or disabled in the app configuration UI. All tools are enabled by default. You can disable specific tools for security:
 
 - Disable `uninstall_addon` to prevent accidental deletions
 - Disable `restart_homeassistant` to prevent system disruptions
@@ -108,7 +108,7 @@ Every tool can be individually enabled or disabled in the addon configuration UI
 
 ## Connecting AI Assistants
 
-The addon concurrently supports both **Streamable HTTP** (recommended for modern MCP clients) and **SSE (Server-Sent Events)** transports.
+The app concurrently supports both **Streamable HTTP** (recommended for modern MCP clients) and **SSE (Server-Sent Events)** transports.
 
 ### Streamable HTTP (Recommended)
 
@@ -189,7 +189,7 @@ Any MCP-compatible client can connect using either transport:
 
 Once connected, you can have natural conversations with your AI assistant:
 
-**Addon Management:**
+**App Management:**
 ```
 "What addons do I have installed?"
 "Install the ESPHome addon"
@@ -229,12 +229,12 @@ Once connected, you can have natural conversations with your AI assistant:
 
 ## Comparison with Native HA MCP Server
 
-Home Assistant 2024.x includes a built-in MCP server. Here's how this addon compares:
+Home Assistant 2024.x includes a built-in MCP server. Here's how this app compares:
 
-| Feature | Native HA MCP | This Addon |
+| Feature | Native HA MCP | This App |
 |---------|---------------|------------|
 | Entity Control | ✅ Basic | ✅ Advanced |
-| Addon Management | ❌ | ✅ 22 tools |
+| App Management | ❌ | ✅ 22 tools |
 | Backup Management | ❌ | ✅ 5 tools |
 | System Diagnostics | ❌ | ✅ 10 tools |
 | Automation CRUD | ❌ | ✅ 8 tools |
@@ -243,16 +243,16 @@ Home Assistant 2024.x includes a built-in MCP server. Here's how this addon comp
 | Total Tools | Varies by version | 62 (documented) |
 | Setup | OAuth required | Simple API key |
 
-**Use this addon if you want:**
+**Use this app if you want:**
 - Complete Home Assistant management
 - System administration capabilities
 - Diagnostic and troubleshooting tools
-- Addon and backup management
+- App and backup management
 - Granular control over available tools
 
 ## Complete Tool List
 
-**Addon Management (22 tools):**
+**App Management (22 tools):**
 list_addons, get_addon_info, get_addon_logs, start_addon, stop_addon, restart_addon, update_addon, install_addon, uninstall_addon, get_addon_configuration, set_addon_configuration, validate_addon_configuration, rebuild_addon, list_store_addons, reload_addons, check_addon_availability, get_supervisor_logs, get_homeassistant_logs, restart_homeassistant, read_config_file, write_config_file, check_config
 
 **Backup Management (5 tools):**
@@ -280,11 +280,11 @@ get_system_health, get_error_log_summary, list_unavailable_entities, get_recorde
 
 ### Authentication
 
-The addon uses API key authentication. Your API key should be kept private - anyone with it can manage your Home Assistant installation.
+The app uses API key authentication. Your API key should be kept private - anyone with it can manage your Home Assistant installation.
 
 ### Tool Toggles
 
-For security, you can disable specific tools in the addon configuration UI. This allows you to create custom security profiles:
+For security, you can disable specific tools in the app configuration UI. This allows you to create custom security profiles:
 
 - **Read-only mode**: Disable all control/management tools
 - **Safe mode**: Disable destructive operations (uninstall, delete, remove)
@@ -292,7 +292,7 @@ For security, you can disable specific tools in the addon configuration UI. This
 
 ### Network Security
 
-- The addon listens on all interfaces by default (`0.0.0.0`)
+- The app listens on all interfaces by default (`0.0.0.0`)
 - Use a firewall to restrict access if exposed to the internet
 - Consider using a reverse proxy with additional authentication
 - Prefer API keys in request headers where your MCP client supports them.
@@ -304,32 +304,32 @@ For security, you can disable specific tools in the addon configuration UI. This
 ### Connection Issues
 
 **"Connection refused" or can't connect:**
-- Verify the addon is running (check the Info tab)
+- Verify the app is running (check the Info tab)
 - Confirm you're using the correct IP address and port
 - Check firewall rules aren't blocking port 8010
 
 ### Authentication Errors
 
 **"Unauthorized" errors:**
-- Verify your API key matches the one in the addon logs
+- Verify your API key matches the one in the app logs
 - Ensure there are no extra spaces when copying the key
 - For entity/integration tools, confirm `ha_token` is set
 
 ### Tool Not Working
 
 **Entity/Integration tools not working:**
-- Ensure `ha_token` is configured in addon settings
+- Ensure `ha_token` is configured in app settings
 - Generate a new long-lived access token if needed
-- Restart the addon after setting the token
+- Restart the app after setting the token
 
-**Addon won't start:**
-- Check the addon logs for specific errors
+**App won't start:**
+- Check the app logs for specific errors
 - Verify port 8010 isn't used by another service
 - Try changing the port in configuration
 
 ### Getting Help
 
-1. Check the addon logs
+1. Check the app logs
 2. Search [existing issues](https://github.com/minermartijn/Asgard_HA_AddOns/issues)
 3. Open a [new issue](https://github.com/yourusername/ha-full-mcp-server/issues/new) with logs
 
@@ -357,6 +357,6 @@ Made with ❤️ for the Home Assistant community
 Built with ⚡ by Asgard.
 
 ### Support my caffeine addiction ☕
-If these addons saved you some time (or a headache), feel free to fuel my next coding session! My code is powered by high-quality caffeine—one cup equals approximately three features and only one new bug. 😉
+If these apps saved you some time (or a headache), feel free to fuel my next coding session! My code is powered by high-quality caffeine—one cup equals approximately three features and only one new bug. 😉
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/minermartijn)
