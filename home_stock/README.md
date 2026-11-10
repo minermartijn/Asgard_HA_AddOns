@@ -16,7 +16,7 @@ No accounts, no clutter, no learning curve.
 
 ## 🚀 Installation
 
-1. Add this repository to Home Assistant (**Settings → Add-ons → Add-on Store → ⋮ → Repositories**):
+1. Add this repository to Home Assistant (**Settings → Apps → Install app → ⋮ → Repositories**):
    `https://github.com/minermartijn/Asgard_HA_AddOns`
 2. Install **Home Stock** and start it.
 3. Open the **Voorraad** panel from the sidebar.
@@ -41,6 +41,6 @@ Data is stored in `/data/db/home_stock.db` and survives restarts and updates.
 Built with ⚡ by Asgard.
 
 ### Support my caffeine addiction ☕
-If this add-on saved you a trip back to the store, feel free to fuel my next coding session! My code is powered by high-quality caffeine—one cup equals approximately three features and only one new bug. 😉
+If this app saved you a trip back to the store, feel free to fuel my next coding session! My code is powered by high-quality caffeine—one cup equals approximately three features and only one new bug. 😉
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/minermartijn)

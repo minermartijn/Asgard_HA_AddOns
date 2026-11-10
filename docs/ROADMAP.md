@@ -9,7 +9,7 @@ This list describes proposed improvements, not promises or completed work. Prior
 - [x] Add Full MCP tool-allowlist execution and logging regression tests.
 - [ ] Add route-level authentication and authorization regression tests for the full set of protected MCP endpoints.
 - [ ] Add release smoke tests against a disposable Home Assistant test environment.
-- [ ] Publish independently tagged GitHub Releases for each add-on after validation.
+- [ ] Publish independently tagged GitHub Releases for each app after validation.
 
 ## Documentation and onboarding
 - [ ] Record a real Full MCP + Lifeboat recovery demonstration.

@@ -1,12 +1,12 @@
 name: Feature request
-description: Suggest an improvement to an existing add-on
+description: Suggest an improvement to an existing app
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
   - type: dropdown
     id: addon
     attributes:
-      label: Add-on
+      label: App
       options:
         - HA Full MCP Server
         - Lifeboat MCP Server

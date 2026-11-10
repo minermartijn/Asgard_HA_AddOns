@@ -1,6 +1,6 @@
 # Architecture: Full MCP and Lifeboat
 
-Asgard's two MCP add-ons are separate servers. The Full MCP server offers the broad set of Home Assistant operations; Lifeboat focuses on add-on maintenance and recovery, keeping a second communication path available if the Full MCP add-on is unavailable.
+Asgard's two MCP apps are separate servers. The Full MCP server offers the broad set of Home Assistant operations; Lifeboat focuses on app maintenance and recovery, keeping a second communication path available if the Full MCP app is unavailable.
 
 ```mermaid
 flowchart LR
@@ -21,10 +21,10 @@ For the complete verified tool catalogs (all **62 Full MCP** and **22 Lifeboat**
 
 ## Design principles
 
-- **Independent add-ons:** The two MCP servers run as separate add-ons and can be updated separately.
+- **Independent apps:** The two MCP servers run as separate apps and can be updated separately.
 - **Distinct credentials:** Use different long, randomly generated API keys for Full MCP and Lifeboat. Never include real credentials in examples, recordings, issues or commits.
-- **Least privilege:** Full MCP exposes administrative and configuration-changing actions; disable unnecessary tools. Lifeboat also has powerful add-on administration capabilities.
-- **Recovery after a failed update:** If Full MCP crashes or fails to restart but Home Assistant Supervisor, the host, the network, and Lifeboat are still operational, an authorized client can use Lifeboat to inspect logs and repair the add-on.
+- **Least privilege:** Full MCP exposes administrative and configuration-changing actions; disable unnecessary tools. Lifeboat also has powerful app administration capabilities.
+- **Recovery after a failed update:** If Full MCP crashes or fails to restart but Home Assistant Supervisor, the host, the network, and Lifeboat are still operational, an authorized client can use Lifeboat to inspect logs and repair the app.
 - **No magic fallback:** Lifeboat will not recover a complete host outage, broken Supervisor, or loss of network connectivity. Maintain standard Home Assistant backups and recovery access.
 
 ## Supported connections
