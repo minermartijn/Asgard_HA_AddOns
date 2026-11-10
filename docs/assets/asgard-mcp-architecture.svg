@@ -16,7 +16,7 @@
 <text x="62" y="80" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="white">Two MCP servers. One resilient Home Assistant setup.</text>
 <text x="65" y="119" font-family="Arial, sans-serif" font-size="19" fill="#bdcee2">Full access for everyday operations. A separate Lifeboat when the primary connection stops.</text>
 <rect x="65" y="164" width="240" height="34" rx="17" fill="#1f3958"/>
-<text x="185" y="187" text-anchor="middle" font-size="14" font-weight="700" font-family="Arial, sans-serif" fill="#d5e8ff">ASGARD HOME ASSISTANT ADD-ONS</text>
+<text x="185" y="187" text-anchor="middle" font-size="14" font-weight="700" font-family="Arial, sans-serif" fill="#d5e8ff">ASGARD HOME ASSISTANT APPS</text>
 <!-- client -->
 <rect x="65" y="252" width="262" height="256" rx="20" fill="#213750" stroke="#577596" stroke-width="1.5" filter="url(#shadow)"/>
 <rect x="84" y="274" width="54" height="54" rx="12" fill="#324e70"/>
@@ -34,14 +34,14 @@
 <text x="474" y="340" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#d4efff">62 tools / 8 categories</text>
 <text x="474" y="370" font-family="Arial, sans-serif" font-size="16" fill="#eef8ff">Entities, automations, dashboards,</text>
 <text x="474" y="395" font-family="Arial, sans-serif" font-size="16" fill="#eef8ff">integrations, backups, diagnostics,</text>
-<text x="474" y="420" font-family="Arial, sans-serif" font-size="16" fill="#eef8ff">inventory and add-on management</text>
+<text x="474" y="420" font-family="Arial, sans-serif" font-size="16" fill="#eef8ff">inventory and app management</text>
 <!-- lifeboat -->
 <rect x="450" y="503" width="395" height="244" rx="20" fill="url(#life)" stroke="#79d6bf" stroke-width="1.5" filter="url(#shadow)"/>
 <rect x="472" y="524" width="105" height="30" rx="15" fill="#064c45"/>
 <text x="524" y="544" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#d3fff2">PORT 8015</text>
 <text x="474" y="600" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="white">LIFEBOAT MCP</text>
 <text x="474" y="635" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#d5fff0">22 tools / 2 categories</text>
-<text x="474" y="666" font-family="Arial, sans-serif" font-size="16" fill="#edfff7">Add-on lifecycle, logs and updates</text>
+<text x="474" y="666" font-family="Arial, sans-serif" font-size="16" fill="#edfff7">App lifecycle, logs and updates</text>
 <text x="474" y="694" font-family="Arial, sans-serif" font-size="16" fill="#edfff7">Targeted backup and restore</text>
 <text x="474" y="720" font-family="Arial, sans-serif" font-size="16" fill="#edfff7">Separate fallback connection</text>
 <!-- HA Core -->
@@ -54,9 +54,9 @@
 <rect x="996" y="488" width="335" height="181" rx="20" fill="#263e58" stroke="#789bbb" stroke-width="1.5" filter="url(#shadow)"/>
 <text x="1019" y="531" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="white">HOME ASSISTANT</text>
 <text x="1019" y="562" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#b9dfff">SUPERVISOR</text>
-<text x="1019" y="592" font-family="Arial, sans-serif" font-size="16" fill="#d5e7f6">Add-ons, logs and backups</text>
+<text x="1019" y="592" font-family="Arial, sans-serif" font-size="16" fill="#d5e7f6">Apps, logs and backups</text>
 <text x="1019" y="621" font-family="Arial, sans-serif" font-size="16" fill="#d5e7f6">Restart / rebuild / restore</text>
-<text x="1019" y="647" font-family="Arial, sans-serif" font-size="16" fill="#d5e7f6">the primary MCP add-on</text>
+<text x="1019" y="647" font-family="Arial, sans-serif" font-size="16" fill="#d5e7f6">the primary MCP app</text>
 <!-- wires -->
 <path d="M327 325H450" stroke="#72c2ff" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/>
 <text x="341" y="308" font-family="Arial, sans-serif" font-size="14" fill="#c1e4ff">NORMAL</text>
