@@ -2,14 +2,24 @@
 
 All notable changes to ASGARD Backup Inspector will be documented in this file.
 
-## [Unreleased]
+## [0.2.0] - 2026-11-11
 
-## [0.1.0] - not yet released
+### Fixed
+- Fixed critical frontend `TypeError` in `formatDate()` where combining `dateStyle`/`timeStyle` with `timeZoneName` halted rendering, preventing the storage card, last-checked timestamp, and backup table from populating.
+- Added safe formatting fallbacks and isolated rendering per dashboard card so unexpected values in one record never block the rest of the interface.
 
 ### Added
-- Read-only Supervisor adapter for `GET /backups/info`, with timeouts, response size limits and clear handling of 401/403/5xx/malformed responses.
-- Normalized backup metadata where unknown values stay unknown (no size becomes "Unknown", never 0).
-- Freshness evaluation with a configurable threshold; "No backups found" is never reported as healthy.
-- Ingress-only dashboard with overview cards and a backup table, relative URLs, no external assets, light/dark theme.
-- 5-minute metadata cache, rate-limited manual refresh, last-good data kept on failure.
-- `demo_mode` option with clearly labelled synthetic data.
+- **Storage Visualization:** Full backup vs Partial backup storage breakdown bar, location distribution badges (`.local`, remote mounts), and top backup storage details.
+- **Backup Timeline:** Chronological visual timeline of recent backups displaying backup types and age relative to freshness threshold.
+- **Table Controls:** Real-time search by backup name or ID, filters for backup type (all/full/partial), storage location, and password protection status.
+- **Table Sorting & Pagination:** Clickable column headers and sort selector (Date, Size, Name, Type) with page size selection (10, 25, 50, all).
+- **Diagnostics Panel:** Expandable panel with Ingress verification, Supervisor status, cache policy, and threshold details.
+- **Measured History Snapshots:** Safe, crash-resistant snapshot history stored under `/data/history.json` with rate-limited dedup and SVG trend visualization.
+- **Automated Browser Tests:** Real Playwright end-to-end browser test suite verifying rendering, responsive viewports, light/dark themes, and console clean state.
+
+## [0.1.0] - 2026-11-11
+
+### Added
+- Initial release with read-only Supervisor adapter for `GET /backups/info`.
+- Normalized backup metadata and freshness evaluation engine.
+- Home Assistant Ingress web interface.

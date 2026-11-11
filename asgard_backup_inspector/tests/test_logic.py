@@ -144,3 +144,13 @@ def test_mixed_valid_and_missing_dates_warns():
     assert s.freshness is Freshness.FRESH
     assert s.unknown_date_count == 1
     assert any("no readable creation date" in w for w in s.warnings)
+
+
+def test_full_and_partial_backup_counts():
+    b_full = BackupSummary(id="b1", backup_type="full", size_bytes=100)
+    b_part = BackupSummary(id="b2", backup_type="partial", size_bytes=50)
+    b_unk = BackupSummary(id="b3", backup_type=None, size_bytes=20)
+    s = evaluate([b_full, b_part, b_unk], now=NOW, stale_threshold_hours=48, api_status=ApiStatus.OK)
+    assert s.total_count == 3
+    assert s.full_backup_count == 1
+    assert s.partial_backup_count == 1

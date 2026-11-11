@@ -1,15 +1,17 @@
 # ASGARD Backup Inspector
 
-> **Status: experimental (0.1.0, unreleased).** Not yet installation-tested on a real Home Assistant system. Read [Limitations](#limitations) before relying on it.
+> **Version: 0.2.0.** Read-only dashboard for Home Assistant backup metadata. Read [Limitations](#limitations) before relying on it.
 
 A read-only dashboard, opened from the Home Assistant sidebar, that answers one question: **is a recent backup listed?**
 
 It shows:
 
-- how many backups the Supervisor lists;
-- the age of the most recent one, compared with a staleness threshold you choose (48 hours by default);
-- the total size of backups whose size is known (backups without a size are counted separately, never as 0);
-- a table with date, age, name, type, size, password protection and storage locations.
+- **Backup Freshness & Health:** Instant status verification against a configurable staleness threshold (48 hours by default);
+- **Backup Counts & Breakdown:** Total backups discovered, split into full and partial archives;
+- **Storage Breakdown:** Total known backup storage, split by backup type and storage locations (e.g. `.local`, network mounts);
+- **Chronological Timeline:** Visual timeline of recent backups showing age and type relative to the freshness threshold;
+- **Searchable Table:** Live keyword search, type/location/protection filters, sortable columns, and pagination;
+- **Storage History Trend:** Safe, persistent local snapshot measurements under `/data/history.json`.
 
 ## What it does not do
 

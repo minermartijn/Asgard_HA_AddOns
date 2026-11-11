@@ -24,6 +24,7 @@ The Supervisor's own "days until stale" backup setting is also shown for referen
 - Results are cached for 5 minutes. **Refresh** re-reads the metadata (at most once every 10 seconds). Refresh never creates a backup.
 - If a check fails after an earlier success, the last good data stays visible and is marked as coming from the last successful check.
 - Timestamps are stored in UTC and shown in your browser's time zone, with the zone name included.
+- Successful snapshot measurements are recorded in `/data/history.json` (bounded to 500 entries with 1h dedup) to provide authentic storage trends over time without modifying backup archives.
 
 ## What metadata is shown
 
@@ -45,6 +46,7 @@ cd asgard_backup_inspector
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 python3 -m pytest -q tests
+node --test tests/test_frontend.js
 ```
 
 All test fixtures are synthetic. Never add real backup files or real Supervisor responses to the repository.

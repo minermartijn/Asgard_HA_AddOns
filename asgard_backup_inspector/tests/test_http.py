@@ -237,3 +237,24 @@ def test_mock_source_missing_file(tmp_path):
     with pytest.raises(SourceError) as exc:
         asyncio.run(missing_src.fetch())
     assert exc.value.status == ApiStatus.UNAVAILABLE
+
+
+def test_api_history_endpoint(tmp_path):
+    settings = Settings(data_dir=str(tmp_path), min_refresh_interval_seconds=0.0)
+    c = TestClient(create_app(settings=settings, source=mock("backups_ok.json")), client=SUPERVISOR_PROXY)
+    # Ensure fresh triggers snapshot recording
+    r = c.get("/api/summary")
+    assert r.status_code == 200
+
+    h = c.get("/api/history")
+    assert h.status_code == 200
+    entries = h.json().get("entries")
+    assert isinstance(entries, list)
+    assert len(entries) >= 1
+    assert entries[0]["total_count"] == 3
+
+
+def test_favicon_route():
+    c = client_for(mock("backups_ok.json"))
+    res = c.get("/favicon.ico")
+    assert res.status_code in (200, 204)
