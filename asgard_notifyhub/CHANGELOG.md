@@ -5,6 +5,14 @@ All notable changes to ASGARD NotifyHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-11-11
+
+### Fixed
+- Resolve frontend API requests under the active Home Assistant Ingress session path instead of accidentally calling Home Assistant Core /api endpoints (which returned 404).
+- Correct overview statistics bindings for discovered notification actions and quiet-hours suppression.
+- Reject untrusted source IPs even if a client spoofs the `X-Ingress-Path` header.
+- Add a browser regression scenario for the actual Ingress URL prefix, including creating a recipient and viewing audit history.
+
 ## [0.1.0] - 2026-11-11
 
 ### Added
