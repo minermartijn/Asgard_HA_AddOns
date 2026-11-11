@@ -143,7 +143,7 @@ class GoogleDriveBackupProvider:
                     available=False,
                     sensor_entity_id=self.sensor_entity_id,
                     state="not_found",
-                    error_message=f"Sensor entity '{self.sensor_entity_id}' not found in Home Assistant (add-on may not be installed or sensor disabled).",
+                    error_message=f"Sensor entity '{self.sensor_entity_id}' not found in Home Assistant (app may not be installed or sensor disabled).",
                 ),
                 [],
             )

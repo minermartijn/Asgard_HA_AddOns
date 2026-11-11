@@ -59,7 +59,7 @@ class RestHomeAssistantClient:
         """Discover available notification services from Home Assistant Core API."""
         self.last_error = None
         if not self.token:
-            self.last_error = "Supervisor token not available. Ensure add-on has homeassistant_api enabled."
+            self.last_error = "Supervisor token not available. Ensure app has homeassistant_api enabled."
             logger.warning(self.last_error)
             return []
 
@@ -77,7 +77,7 @@ class RestHomeAssistantClient:
                     logger.warning(self.last_error)
                     return []
                 elif res.status_code == 403:
-                    self.last_error = "Home Assistant Core API returned 403 Forbidden. Check add-on permissions."
+                    self.last_error = "Home Assistant Core API returned 403 Forbidden. Check app permissions."
                     logger.warning(self.last_error)
                     return []
                 elif res.status_code != 200:

@@ -789,7 +789,7 @@ function renderTable() {
         typeSpan.textContent = 'Partial';
         const nameLower = (b.name || '').toLowerCase();
         if (nameLower.includes('full')) {
-          typeSpan.title = 'Classified as partial by Home Assistant Supervisor (usually occurs when folders or add-ons were excluded)';
+          typeSpan.title = 'Classified as partial by Home Assistant Supervisor (usually occurs when folders or apps were excluded)';
         } else {
           typeSpan.title = 'Confirmed partial backup (Supervisor metadata)';
         }

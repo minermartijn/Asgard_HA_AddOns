@@ -7,7 +7,7 @@ A read-only dashboard, opened from the Home Assistant sidebar, that answers crit
 It shows:
 
 - **Backup Freshness & Redundancy Matrix:** Independent evaluations for Local Freshness, Cloud Freshness, Off-Site Coverage, and Full-Backup Coverage;
-- **Multi-Location Backup Discovery:** Discovers and merges local Supervisor backups and cloud backups managed by the popular Home Assistant Google Drive Backup add-on;
+- **Multi-Location Backup Discovery:** Discovers and merges local Supervisor backups and cloud backups managed by the popular Home Assistant Google Drive Backup app;
 - **Google Drive Status Overview:** Real-time sync status, cloud storage usage, available Google Drive free space, and last successful upload timestamp;
 - **Deduplicated Inventory:** Accurately deduplicates archives present in both locations to display true unique counts and sizes without double-counting;
 - **Location Filtering:** Filter table records by *All Locations*, *Both (Local + Drive)*, *Local Only*, *Google Drive Only*, or *Pending Upload*;

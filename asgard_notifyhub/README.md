@@ -30,7 +30,7 @@ It acts as a smart dispatcher between your automations and your physical notify 
 
 ## Installation
 
-1. Add this repository to Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ → Repositories** and enter:
+1. Add this repository to Home Assistant: **Settings → Apps → App store → ⋮ → Repositories** and enter:
    `https://github.com/minermartijn/Asgard_HA_AddOns`
 2. Install **ASGARD NotifyHub** and click **Start**.
 3. Open **NotifyHub** from the sidebar.

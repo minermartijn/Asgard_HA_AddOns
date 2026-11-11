@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | `stale_threshold_hours` | `48` | If the newest listed backup is older than this, the status is **Stale**. Range 1–2160 hours. |
 | `demo_mode` | `false` | Show synthetic example data instead of reading from the Supervisor. The UI then shows a "Demo mode" banner. Useful for previews and screenshots. |
-| `enable_google_drive` | `true` | Enable discovery of backups synced with Home Assistant Google Drive Backup add-on via `sensor.backup_state`. |
+| `enable_google_drive` | `true` | Enable discovery of backups synced with Home Assistant Google Drive Backup app via `sensor.backup_state`. |
 | `google_drive_sensor` | `sensor.backup_state` | Sensor entity ID to query in Home Assistant Core API for cloud backup telemetry. |
 
 The Supervisor's own "days until stale" backup setting is also shown for reference, but the App's verdict uses `stale_threshold_hours`.
