@@ -1,0 +1,306 @@
+"""FastAPI Application for ASGARD NotifyHub with Home Assistant Ingress support."""
+
+from __future__ import annotations
+
+import ipaddress
+import logging
+import uuid
+from pathlib import Path
+from typing import Optional
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from app import __version__
+from app.models import (
+    QuietPolicy,
+    Recipient,
+    RecipientGroup,
+    Route,
+    SendRequest,
+)
+from app.settings import Settings, load_settings
+from app.storage import Storage
+from app.client import DemoHomeAssistantClient, RestHomeAssistantClient
+from app.service import NotifyHubService
+
+logger = logging.getLogger("asgard_notifyhub")
+
+APP_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = APP_DIR / "frontend"
+STATIC_DIR = APP_DIR / "static"
+
+
+def create_app(
+    settings: Optional[Settings] = None,
+    service: Optional[NotifyHubService] = None,
+) -> FastAPI:
+    cfg = settings or load_settings()
+
+    if service is None:
+        storage = Storage(cfg.db_path)
+        if cfg.demo_mode or not cfg.supervisor_token:
+            client = DemoHomeAssistantClient()
+        else:
+            client = RestHomeAssistantClient(core_api_url=cfg.core_api_url, token=cfg.supervisor_token)
+        svc = NotifyHubService(storage=storage, ha_client=client, demo_mode=cfg.demo_mode)
+    else:
+        svc = service
+
+    allowed_networks = []
+    for item in (cfg.allowed_source_ips or "").split(","):
+        cleaned = item.strip()
+        if cleaned:
+            try:
+                allowed_networks.append(ipaddress.ip_network(cleaned, strict=False))
+            except ValueError:
+                pass
+
+    app = FastAPI(
+        title="ASGARD NotifyHub",
+        version=__version__,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
+    app.state.service = svc
+    app.state.settings = cfg
+
+    # ---- Security & Ingress Middleware ----
+    @app.middleware("http")
+    async def security_and_ingress_guard(request: Request, call_next):
+        client_host = request.client.host if request.client else None
+        if allowed_networks and client_host:
+            try:
+                c_ip = ipaddress.ip_address(client_host)
+                if not any(c_ip in net for net in allowed_networks):
+                    # Also permit requests if valid Ingress header is present and proxy matches
+                    if not request.headers.get("X-Ingress-Path"):
+                        return JSONResponse(status_code=403, content={"detail": "Forbidden: untrusted source IP"})
+            except ValueError:
+                return JSONResponse(status_code=403, content={"detail": "Forbidden: invalid source IP"})
+
+        response: Response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        return response
+
+    if STATIC_DIR.exists():
+        app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    # ---- Routes ----
+
+    @app.get("/")
+    async def index():
+        index_file = FRONTEND_DIR / "index.html"
+        if not index_file.exists():
+            return JSONResponse({"status": "NotifyHub running", "version": __version__})
+        return FileResponse(index_file)
+
+    @app.get("/favicon.ico")
+    async def favicon():
+        fav = STATIC_DIR / "favicon.ico"
+        if fav.exists():
+            return FileResponse(fav)
+        return Response(status_code=204)
+
+    @app.get("/api/health")
+    async def health():
+        return {
+            "status": "ok",
+            "version": __version__,
+            "demo_mode": svc.demo_mode,
+        }
+
+    @app.get("/api/summary")
+    async def summary():
+        return await svc.get_summary()
+
+    @app.get("/api/services")
+    async def list_services(refresh: bool = False):
+        services = await svc.get_services(force_refresh=refresh)
+        return {"services": services}
+
+    # Recipients
+    @app.get("/api/recipients")
+    async def get_recipients():
+        recipients = svc.storage.list_recipients()
+        return {"recipients": recipients}
+
+    @app.post("/api/recipients")
+    async def save_recipient(payload: dict):
+        rid = str(payload.get("id") or f"rec_{uuid.uuid4().hex[:8]}")
+        name = str(payload.get("name", "")).strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Recipient name cannot be empty")
+        tz = str(payload.get("timezone", cfg.default_timezone)).strip()
+        enabled = bool(payload.get("enabled", True))
+        rec = Recipient(id=rid, name=name, timezone=tz, enabled=enabled)
+        svc.storage.save_recipient(rec)
+        return {"status": "saved", "recipient": rec}
+
+    @app.delete("/api/recipients/{recipient_id}")
+    async def delete_recipient(recipient_id: str):
+        ok = svc.storage.delete_recipient(recipient_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Recipient not found")
+        return {"status": "deleted"}
+
+    # Routes
+    @app.post("/api/routes")
+    async def save_route(payload: dict):
+        rt_id = str(payload.get("id") or f"rt_{uuid.uuid4().hex[:8]}")
+        rec_id = str(payload.get("recipient_id", "")).strip()
+        if not rec_id or not svc.storage.get_recipient(rec_id):
+            raise HTTPException(status_code=400, detail="Valid recipient_id required")
+        name = str(payload.get("name", "")).strip()
+        ha_service = str(payload.get("ha_service", "")).strip()
+        if not name or not ha_service:
+            raise HTTPException(status_code=400, detail="Route name and ha_service cannot be empty")
+
+        domain = str(payload.get("ha_domain", "notify")).strip()
+        route = Route(
+            id=rt_id,
+            recipient_id=rec_id,
+            name=name,
+            ha_domain=domain,
+            ha_service=ha_service,
+            target_data=payload.get("target_data"),
+            priority_min=payload.get("priority_min", "informational"),
+            enabled=bool(payload.get("enabled", True)),
+        )
+        svc.storage.save_route(route)
+        return {"status": "saved", "route": route}
+
+    @app.delete("/api/routes/{route_id}")
+    async def delete_route(route_id: str):
+        ok = svc.storage.delete_route(route_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Route not found")
+        return {"status": "deleted"}
+
+    # Groups
+    @app.get("/api/groups")
+    async def get_groups():
+        groups = svc.storage.list_groups()
+        return {"groups": groups}
+
+    @app.post("/api/groups")
+    async def save_group(payload: dict):
+        gid = str(payload.get("id") or f"grp_{uuid.uuid4().hex[:8]}")
+        name = str(payload.get("name", "")).strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Group name cannot be empty")
+        desc = payload.get("description")
+        rec_ids = [str(r).strip() for r in payload.get("recipient_ids", []) if str(r).strip()]
+        grp = RecipientGroup(id=gid, name=name, description=desc, recipient_ids=rec_ids)
+        svc.storage.save_group(grp)
+        return {"status": "saved", "group": grp}
+
+    @app.delete("/api/groups/{group_id}")
+    async def delete_group(group_id: str):
+        ok = svc.storage.delete_group(group_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Group not found")
+        return {"status": "deleted"}
+
+    # Policies
+    @app.get("/api/policies")
+    async def get_policies(target_id: Optional[str] = None):
+        policies = svc.storage.list_policies(target_id=target_id)
+        return {"policies": policies}
+
+    @app.post("/api/policies")
+    async def save_policy(payload: dict):
+        pid = str(payload.get("id") or f"pol_{uuid.uuid4().hex[:8]}")
+        tid = str(payload.get("target_id", "")).strip()
+        if not tid:
+            raise HTTPException(status_code=400, detail="target_id cannot be empty")
+        ttype = payload.get("target_type", "recipient")
+        q_start = str(payload.get("quiet_start", "22:00")).strip()
+        q_end = str(payload.get("quiet_end", "07:00")).strip()
+        day_mask = payload.get("day_mask", [0, 1, 2, 3, 4, 5, 6])
+        tz = str(payload.get("timezone", cfg.default_timezone)).strip()
+        urg_override = bool(payload.get("urgent_override", False))
+        enabled = bool(payload.get("enabled", True))
+
+        policy = QuietPolicy(
+            id=pid,
+            target_id=tid,
+            target_type=ttype,
+            quiet_start=q_start,
+            quiet_end=q_end,
+            day_mask=day_mask,
+            timezone=tz,
+            urgent_override=urg_override,
+            enabled=enabled,
+        )
+        svc.storage.save_policy(policy)
+        return {"status": "saved", "policy": policy}
+
+    @app.delete("/api/policies/{policy_id}")
+    async def delete_policy(policy_id: str):
+        ok = svc.storage.delete_policy(policy_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Policy not found")
+        return {"status": "deleted"}
+
+    # Dispatch & Simulation
+    @app.post("/api/send/preview")
+    async def preview_send(req: SendRequest):
+        res = svc.engine.preview(req, dedup_window_seconds=cfg.dedup_window_seconds)
+        return res
+
+    @app.post("/api/send")
+    async def execute_send(req: SendRequest):
+        if not req.message.strip():
+            raise HTTPException(status_code=400, detail="Message body cannot be empty")
+        records = await svc.engine.execute(req, dedup_window_seconds=cfg.dedup_window_seconds)
+        return {"records": records}
+
+    @app.post("/api/routes/{route_id}/test")
+    async def test_route(route_id: str):
+        # Find recipient with route
+        recipients = svc.storage.list_recipients()
+        found_route: Optional[Route] = None
+        for r in recipients:
+            for rt in r.routes:
+                if rt.id == route_id:
+                    found_route = rt
+                    break
+            if found_route:
+                break
+
+        if not found_route:
+            raise HTTPException(status_code=404, detail="Route not found")
+
+        success, err = await svc.ha_client.send_notification(
+            domain=found_route.ha_domain,
+            service=found_route.ha_service,
+            title="ASGARD NotifyHub Route Test",
+            message=f"Test ping verifying route '{found_route.name}'.",
+            data=found_route.target_data,
+        )
+        return {
+            "success": success,
+            "route_id": route_id,
+            "ha_service": f"{found_route.ha_domain}.{found_route.ha_service}",
+            "error": err,
+        }
+
+    # History & Purge
+    @app.get("/api/history")
+    async def list_history(limit: int = 100):
+        records = svc.storage.list_history(limit=limit)
+        return {"history": records}
+
+    @app.post("/api/history/purge")
+    async def purge_history(days: int = 30):
+        purged = svc.storage.purge_history(older_than_days=days)
+        return {"status": "purged", "count": purged}
+
+    return app
+
+
+app = create_app()

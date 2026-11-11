@@ -13,6 +13,7 @@ on:
           - baby_tracker
           - home_stock
           - asgard_backup_inspector
+          - asgard_notifyhub
       version:
         description: Exact version from the app config.yaml (for example 1.11.0)
         required: true
@@ -51,6 +52,7 @@ jobs:
               "baby_tracker": "baby-tracker",
               "home_stock": "home-stock",
               "asgard_backup_inspector": "asgard-backup-inspector",
+              "asgard_notifyhub": "asgard-notifyhub",
           }
           if addon not in prefixes or not re.fullmatch(r"\d+\.\d+\.\d+", version):
               raise SystemExit("Invalid add-on or release version")
