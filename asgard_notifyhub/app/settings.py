@@ -21,7 +21,7 @@ class Settings(BaseModel):
     data_dir: Path = DEFAULT_DATA_DIR
     allowed_source_ips: str = DEFAULT_SUPERVISOR_PROXY
     demo_mode: bool = False
-    default_timezone: str = "UTC"
+    default_timezone: str = "Europe/Amsterdam"
     dedup_window_seconds: int = 300
     retention_days: int = 30
     min_refresh_interval_seconds: float = 5.0
@@ -60,7 +60,7 @@ def load_settings(options_path: Optional[Path] = None) -> Settings:
 
     allowed_ips = os.environ.get("ALLOWED_SOURCE_IPS") or raw_options.get("allowed_source_ips") or DEFAULT_SUPERVISOR_PROXY
     demo = bool(raw_options.get("demo_mode", False) or os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes"))
-    tz = str(raw_options.get("default_timezone", os.environ.get("TZ", "UTC")))
+    tz = str(raw_options.get("default_timezone", os.environ.get("TZ", "Europe/Amsterdam")))
     dedup = int(raw_options.get("dedup_window_seconds", 300))
     retention = int(raw_options.get("retention_days", 30))
 

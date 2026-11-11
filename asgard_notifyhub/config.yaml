@@ -1,6 +1,6 @@
 name: ASGARD NotifyHub
 slug: asgard_notifyhub
-version: "0.1.4"
+version: "0.1.5"
 description: "Centralized notification policy, quiet hours, recipient routing, and delivery auditing for Home Assistant"
 url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_notifyhub"
 stage: experimental
@@ -19,7 +19,7 @@ hassio_role: default
 homeassistant_api: true
 options:
   demo_mode: false
-  default_timezone: "UTC"
+  default_timezone: "Europe/Amsterdam"
   dedup_window_seconds: 300
   retention_days: 30
 schema:

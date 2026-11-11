@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import re
 import uuid
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -13,18 +15,44 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.models import (
+    Priority,
     QuietPolicy,
     Recipient,
     RecipientGroup,
     Route,
     SendRequest,
+    TargetType,
+    summarize_records,
 )
 from app.settings import Settings, load_settings
 from app.storage import Storage
-from app.client import DemoHomeAssistantClient, RestHomeAssistantClient
+from app.client import (
+    DemoHomeAssistantClient,
+    RestHomeAssistantClient,
+    is_allowed_action,
+    unsupported_action_reason,
+)
 from app.service import NotifyHubService
 
 logger = logging.getLogger("asgard_notifyhub")
+
+_HHMM_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def validate_timezone(tz: str) -> str:
+    """Return a valid IANA timezone name or raise HTTP 400."""
+    cleaned = (tz or "").strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Timezone cannot be empty")
+    try:
+        ZoneInfo(cleaned)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown timezone '{cleaned}'. Use an IANA name such as Europe/Amsterdam or UTC.",
+        )
+    return cleaned
+
 
 APP_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = APP_DIR / "frontend"
@@ -142,12 +170,15 @@ def create_app(
             "status": "ok",
             "version": __version__,
             "demo_mode": svc.demo_mode,
+            "default_timezone": cfg.default_timezone,
         }
 
     @app.get("/api/summary")
     @app.get("/api/summary/")
     async def summary():
-        return await svc.get_summary()
+        data = (await svc.get_summary()).model_dump(mode="json")
+        data["default_timezone"] = cfg.default_timezone
+        return data
 
     @app.get("/api/services")
     @app.get("/api/services/")
@@ -169,7 +200,7 @@ def create_app(
         name = str(payload.get("name", "")).strip()
         if not name:
             raise HTTPException(status_code=400, detail="Recipient name cannot be empty")
-        tz = str(payload.get("timezone", cfg.default_timezone)).strip()
+        tz = validate_timezone(str(payload.get("timezone") or cfg.default_timezone))
         enabled = bool(payload.get("enabled", True))
         rec = Recipient(id=rid, name=name, timezone=tz, enabled=enabled)
         svc.storage.save_recipient(rec)
@@ -195,7 +226,16 @@ def create_app(
         if not name or not ha_service:
             raise HTTPException(status_code=400, detail="Route name and ha_service cannot be empty")
 
-        domain = str(payload.get("ha_domain", "notify")).strip()
+        domain = str(payload.get("ha_domain", "notify")).strip().lower()
+        ha_service = ha_service.lower()
+        if domain == "notify" and ha_service.startswith("notify."):
+            ha_service = ha_service.split(".", 1)[1]
+        if not is_allowed_action(domain, ha_service):
+            raise HTTPException(status_code=400, detail=unsupported_action_reason(domain, ha_service))
+        try:
+            priority_min = Priority(str(payload.get("priority_min", "informational")))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid priority_min")
         route = Route(
             id=rt_id,
             recipient_id=rec_id,
@@ -203,7 +243,7 @@ def create_app(
             ha_domain=domain,
             ha_service=ha_service,
             target_data=payload.get("target_data"),
-            priority_min=payload.get("priority_min", "informational"),
+            priority_min=priority_min,
             enabled=bool(payload.get("enabled", True)),
         )
         svc.storage.save_route(route)
@@ -248,7 +288,20 @@ def create_app(
     @app.get("/api/policies/")
     async def get_policies(target_id: Optional[str] = None):
         policies = svc.storage.list_policies(target_id=target_id)
-        return {"policies": policies}
+        out = []
+        for pol in policies:
+            item = pol.model_dump(mode="json")
+            item["orphaned"] = _policy_target_missing(pol.target_type, pol.target_id)
+            out.append(item)
+        return {"policies": out}
+
+    def _policy_target_missing(target_type, target_id: str) -> bool:
+        ttype = target_type.value if isinstance(target_type, TargetType) else str(target_type)
+        if ttype == TargetType.RECIPIENT.value:
+            return svc.storage.get_recipient(target_id) is None
+        if ttype == TargetType.GROUP.value:
+            return svc.storage.get_group(target_id) is None
+        return False
 
     @app.post("/api/policies")
     @app.post("/api/policies/")
@@ -257,11 +310,25 @@ def create_app(
         tid = str(payload.get("target_id", "")).strip()
         if not tid:
             raise HTTPException(status_code=400, detail="target_id cannot be empty")
-        ttype = payload.get("target_type", "recipient")
+        try:
+            ttype = TargetType(str(payload.get("target_type", "recipient")))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="target_type must be recipient, group or global")
+        if _policy_target_missing(ttype, tid):
+            kind = "Recipient" if ttype == TargetType.RECIPIENT else "Group"
+            raise HTTPException(status_code=400, detail=f"{kind} '{tid}' does not exist. Choose an existing target.")
         q_start = str(payload.get("quiet_start", "22:00")).strip()
         q_end = str(payload.get("quiet_end", "07:00")).strip()
-        day_mask = payload.get("day_mask", [0, 1, 2, 3, 4, 5, 6])
-        tz = str(payload.get("timezone", cfg.default_timezone)).strip()
+        if not _HHMM_RE.match(q_start) or not _HHMM_RE.match(q_end):
+            raise HTTPException(status_code=400, detail="quiet_start and quiet_end must use HH:MM (24h)")
+        raw_mask = payload.get("day_mask", [0, 1, 2, 3, 4, 5, 6])
+        try:
+            day_mask = sorted({int(d) for d in raw_mask})
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="day_mask must be a list of weekday numbers 0-6")
+        if not day_mask or any(d < 0 or d > 6 for d in day_mask):
+            raise HTTPException(status_code=400, detail="Select at least one active day (0=Mon … 6=Sun)")
+        tz = validate_timezone(str(payload.get("timezone") or cfg.default_timezone))
         urg_override = bool(payload.get("urgent_override", False))
         enabled = bool(payload.get("enabled", True))
 
@@ -297,7 +364,7 @@ def create_app(
         if not req.message.strip():
             raise HTTPException(status_code=400, detail="Message body cannot be empty")
         records = await svc.engine.execute(req, dedup_window_seconds=cfg.dedup_window_seconds)
-        return {"records": records}
+        return {"records": records, "summary": summarize_records(records)}
 
     @app.post("/api/routes/{route_id}/test")
     async def test_route(route_id: str):
@@ -314,6 +381,13 @@ def create_app(
 
         if not found_route:
             raise HTTPException(status_code=404, detail="Route not found")
+        if not is_allowed_action(found_route.ha_domain, found_route.ha_service):
+            return {
+                "success": False,
+                "route_id": route_id,
+                "ha_service": f"{found_route.ha_domain}.{found_route.ha_service}",
+                "error": unsupported_action_reason(found_route.ha_domain, found_route.ha_service),
+            }
 
         success, err = await svc.ha_client.send_notification(
             domain=found_route.ha_domain,

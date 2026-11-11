@@ -1,12 +1,14 @@
 """Tests for Home Assistant Core API client and domain security boundaries."""
 
 import asyncio
+import json
 import httpx
 import pytest
 from app.client import (
     ALLOWED_DOMAINS,
     DemoHomeAssistantClient,
     RestHomeAssistantClient,
+    is_allowed_action,
 )
 
 
@@ -156,75 +158,146 @@ def test_rest_client_http_errors_and_entities():
     assert client_ok.last_error is None
 
 
-def test_rest_client_known_entity_dispatch():
-    """Verify that known notify entities route directly to notify.send_message."""
+def _ha_mock(post_handler, services=None, states=None):
+    """Build a MockTransport emulating HA discovery plus a custom POST handler."""
     calls = []
+    services = services if services is not None else [
+        {"domain": "notify", "services": {
+            "mobile_app_galaxy_watch5_fhyw": {"name": "Send a notification via mobile_app_galaxy_watch5_fhyw"},
+            "send_message": {"name": "Send a notification message"},
+            "persistent_notification": {"name": "Send a persistent notification"},
+        }},
+        {"domain": "persistent_notification", "services": {
+            "create": {"name": "Create"}, "dismiss": {"name": "Dismiss"}, "dismiss_all": {"name": "Dismiss all"},
+        }},
+        {"domain": "light", "services": {"turn_on": {}}},
+    ]
+    states = states if states is not None else [
+        {"entity_id": "notify.galaxy_watch5_fhyw", "state": "unknown",
+         "attributes": {"friendly_name": "Galaxy Watch5 (FHYW)"}},
+        {"entity_id": "notify.mart_s25", "state": "unknown", "attributes": {"friendly_name": "Mart_S25"}},
+    ]
 
     def handler(request: httpx.Request) -> httpx.Response:
-        import json
-        calls.append({
-            "path": request.url.path,
-            "json": json.loads(request.content.decode("utf-8")),
-        })
-        if request.url.path == "/core/api/services/notify/send_message":
-            return httpx.Response(200, json=[{"success": True}])
-        return httpx.Response(400, text="Bad Request")
+        if request.method == "GET" and request.url.path == "/core/api/services":
+            return httpx.Response(200, json=services)
+        if request.method == "GET" and request.url.path == "/core/api/states":
+            return httpx.Response(200, json=states)
+        body = json.loads(request.content.decode("utf-8")) if request.content else None
+        calls.append({"path": request.url.path, "json": body})
+        return post_handler(request)
 
-    transport = httpx.MockTransport(handler)
+    return httpx.MockTransport(handler), calls
+
+
+def test_discovery_applies_action_level_allowlist():
+    transport, _ = _ha_mock(lambda r: httpx.Response(200, json=[]))
     client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
-    client._known_entities.add("mart_s25")
-    client._known_entities.add("notify.mart_s25")
+    svcs = asyncio.run(client.discover_services())
+    names = {s.full_name for s in svcs}
+    assert "persistent_notification.create" in names
+    assert "persistent_notification.dismiss" not in names
+    assert "persistent_notification.dismiss_all" not in names
+    assert "notify.send_message" not in names
+    assert "light.turn_on" not in names
+    assert "notify.mobile_app_galaxy_watch5_fhyw" in names
+    watch_entity = next(s for s in svcs if s.full_name == "notify.galaxy_watch5_fhyw")
+    assert watch_entity.target_type == "entity"
+    assert watch_entity.ha_state == "unknown"
 
-    ok, err = asyncio.run(
-        client.send_notification(
-            domain="notify",
-            service="mart_s25",
-            title="Test",
-            message="Hello Martijn",
-            data={"channel": "priority"},
-        )
-    )
-    assert ok is True
-    assert err is None
+
+def test_is_allowed_action_matrix():
+    assert is_allowed_action("notify", "mobile_app_mart_s25")
+    assert is_allowed_action("notify", "mart_s25")
+    assert is_allowed_action("persistent_notification", "create")
+    assert not is_allowed_action("persistent_notification", "dismiss")
+    assert not is_allowed_action("persistent_notification", "dismiss_all")
+    assert not is_allowed_action("notify", "send_message")
+    assert not is_allowed_action("notify", "../../services/light")
+    assert not is_allowed_action("shell_command", "anything")
+
+
+def test_entity_dispatch_uses_send_message_without_data():
+    transport, calls = _ha_mock(lambda r: httpx.Response(200, json=[]))
+    client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
+    ok, err = asyncio.run(client.send_notification(
+        domain="notify", service="mart_s25", title="Test", message="Hello", data={"channel": "x"},
+    ))
+    assert ok is True and err is None
     assert len(calls) == 1
     assert calls[0]["path"] == "/core/api/services/notify/send_message"
-    assert calls[0]["json"]["entity_id"] == "notify.mart_s25"
-    assert calls[0]["json"]["message"] == "Hello Martijn"
-    assert calls[0]["json"]["title"] == "Test"
-    assert calls[0]["json"]["data"] == {"channel": "priority"}
+    assert calls[0]["json"] == {"entity_id": "notify.mart_s25", "message": "Hello", "title": "Test"}
 
 
-def test_rest_client_unknown_entity_fallback_on_400():
-    """Verify that when calling a notify service returns 400 Bad Request, it falls back to notify.send_message."""
-    calls = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        import json
-        calls.append({
-            "path": request.url.path,
-            "json": json.loads(request.content.decode("utf-8")),
-        })
-        if request.url.path == "/core/api/services/notify/mart_s25":
-            return httpx.Response(400, text="400: Bad Request")
-        elif request.url.path == "/core/api/services/notify/send_message":
-            return httpx.Response(200, json=[{"success": True}])
-        return httpx.Response(404, text="Not Found")
-
-    transport = httpx.MockTransport(handler)
+def test_legacy_service_dispatch_keeps_data():
+    transport, calls = _ha_mock(lambda r: httpx.Response(200, json=[]))
     client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
-
-    ok, err = asyncio.run(
-        client.send_notification(
-            domain="notify",
-            service="mart_s25",
-            title="Alert",
-            message="Door opened",
-        )
-    )
+    ok, _ = asyncio.run(client.send_notification(
+        domain="notify", service="mobile_app_galaxy_watch5_fhyw", title=None, message="Hi", data={"ttl": 0},
+    ))
     assert ok is True
-    assert err is None
-    assert len(calls) == 2
-    assert calls[0]["path"] == "/core/api/services/notify/mart_s25"
-    assert calls[1]["path"] == "/core/api/services/notify/send_message"
-    assert calls[1]["json"]["entity_id"] == "notify.mart_s25"
-    assert "mart_s25" in client._known_entities
+    assert len(calls) == 1
+    assert calls[0]["path"] == "/core/api/services/notify/mobile_app_galaxy_watch5_fhyw"
+    assert calls[0]["json"] == {"message": "Hi", "data": {"ttl": 0}}
+
+
+def test_galaxy_watch_entity_http_500_is_reported_without_retry():
+    """Reproduces the real-world failure: notify.galaxy_watch5_fhyw -> HTTP 500.
+
+    The client must make exactly one call (no fallback that could duplicate the
+    notification) and return an actionable message pointing at the mobile_app action.
+    """
+    def post(request):
+        if request.url.path == "/core/api/services/notify/send_message":
+            return httpx.Response(500, text="500 Internal Server Error")
+        return httpx.Response(200, json=[])
+
+    transport, calls = _ha_mock(post)
+    client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
+    ok, err = asyncio.run(client.send_notification(
+        domain="notify", service="galaxy_watch5_fhyw", title="T", message="M",
+    ))
+    assert ok is False
+    assert len(calls) == 1, "must not retry through alternative actions"
+    assert "HTTP 500" in err
+    assert "notify.galaxy_watch5_fhyw" in err
+    assert "mobile_app" in err
+    assert "'unknown'" in err
+
+
+def test_service_400_is_not_retried_through_send_message():
+    transport, calls = _ha_mock(lambda r: httpx.Response(400, text="400: Bad Request"), states=[])
+    client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
+    ok, err = asyncio.run(client.send_notification(
+        domain="notify", service="mobile_app_old_phone", title=None, message="M",
+    ))
+    assert ok is False
+    assert len(calls) == 1
+    assert "HTTP 400" in err and "Sync Services" in err
+
+
+def test_blocked_actions_never_reach_home_assistant():
+    transport, calls = _ha_mock(lambda r: httpx.Response(200, json=[]))
+    client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
+    for svc in ("dismiss", "dismiss_all"):
+        ok, err = asyncio.run(client.send_notification(
+            domain="persistent_notification", service=svc, title=None, message="M",
+        ))
+        assert ok is False and "Unsupported route" in err
+    ok, err = asyncio.run(client.send_notification(domain="notify", service="send_message", title=None, message="M"))
+    assert ok is False
+    assert calls == []
+
+
+def test_timeout_is_not_resent():
+    def post(request):
+        raise httpx.ReadTimeout("slow", request=request)
+
+    transport, calls = _ha_mock(post)
+    client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
+    ok, err = asyncio.run(client.send_notification(
+        domain="notify", service="mobile_app_galaxy_watch5_fhyw", title=None, message="M",
+    ))
+    assert ok is False
+    assert len(calls) == 1
+    assert "not resent" in err
