@@ -48,6 +48,7 @@ class RestHomeAssistantClient:
         self.timeout_seconds = timeout_seconds
         self.transport = transport
         self.last_error: Optional[str] = None
+        self._known_entities: set[str] = set()
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -142,6 +143,8 @@ class RestHomeAssistantClient:
                             eid = str(entity.get("entity_id", "")).strip().lower()
                             if eid.startswith("notify."):
                                 entity_svc_name = eid.split(".", 1)[1]
+                                self._known_entities.add(entity_svc_name)
+                                self._known_entities.add(eid)
                                 if not any(s.ha_domain == "notify" and s.ha_service == entity_svc_name for s in services):
                                     attrs = entity.get("attributes", {}) if isinstance(entity.get("attributes"), dict) else {}
                                     friendly = attrs.get("friendly_name") or eid
@@ -173,7 +176,7 @@ class RestHomeAssistantClient:
         message: str,
         data: Optional[dict[str, Any]] = None,
     ) -> tuple[bool, Optional[str]]:
-        """Call a notification service via Home Assistant Core API."""
+        """Call a notification service via Home Assistant Core API with entity dispatch support."""
         d_clean = domain.strip().lower()
         s_clean = service.strip().lower()
 
@@ -188,12 +191,12 @@ class RestHomeAssistantClient:
             logger.error(err)
             return False, err
 
-        url = f"{self.core_api_url}/services/{d_clean}/{s_clean}"
-        payload: dict[str, Any] = {"message": message}
-        if title:
-            payload["title"] = title
-        if data and isinstance(data, dict):
-            payload["data"] = data
+        target_entity = s_clean if s_clean.startswith("notify.") else f"notify.{s_clean}"
+        is_known_entity = (
+            d_clean == "notify"
+            and (s_clean in self._known_entities or target_entity in self._known_entities)
+            and s_clean != "send_message"
+        )
 
         try:
             async with httpx.AsyncClient(
@@ -201,12 +204,72 @@ class RestHomeAssistantClient:
                 transport=self.transport,
                 follow_redirects=False,
             ) as client:
-                res = await client.post(url, headers=self._headers(), json=payload)
-                if res.status_code in (200, 201):
-                    return True, None
-                err = f"Home Assistant rejected call with HTTP {res.status_code}: {res.text[:200]}"
-                logger.warning(err)
-                return False, err
+                if is_known_entity:
+                    # Entity dispatch: use notify.send_message with entity_id
+                    entity_url = f"{self.core_api_url}/services/notify/send_message"
+                    entity_payload: dict[str, Any] = {
+                        "entity_id": target_entity,
+                        "message": message,
+                    }
+                    if title:
+                        entity_payload["title"] = title
+                    if data and isinstance(data, dict):
+                        entity_payload["data"] = data
+
+                    res = await client.post(entity_url, headers=self._headers(), json=entity_payload)
+                    if res.status_code in (200, 201):
+                        return True, None
+
+                    # If send_message fails, try legacy direct service call as fallback
+                    legacy_url = f"{self.core_api_url}/services/{d_clean}/{s_clean}"
+                    legacy_payload: dict[str, Any] = {"message": message}
+                    if title:
+                        legacy_payload["title"] = title
+                    if data and isinstance(data, dict):
+                        legacy_payload["data"] = data
+
+                    res_leg = await client.post(legacy_url, headers=self._headers(), json=legacy_payload)
+                    if res_leg.status_code in (200, 201):
+                        return True, None
+
+                    err = f"Home Assistant rejected call with HTTP {res.status_code}: {res.text[:200]}"
+                    logger.warning(err)
+                    return False, err
+                else:
+                    # Standard service call first
+                    url = f"{self.core_api_url}/services/{d_clean}/{s_clean}"
+                    payload: dict[str, Any] = {"message": message}
+                    if title:
+                        payload["title"] = title
+                    if data and isinstance(data, dict):
+                        payload["data"] = data
+
+                    res = await client.post(url, headers=self._headers(), json=payload)
+                    if res.status_code in (200, 201):
+                        return True, None
+
+                    # If a notify service call returns 400 or 404, fallback to notify.send_message with entity_id
+                    if d_clean == "notify" and res.status_code in (400, 404) and s_clean != "send_message":
+                        fallback_url = f"{self.core_api_url}/services/notify/send_message"
+                        fallback_payload: dict[str, Any] = {
+                            "entity_id": target_entity,
+                            "message": message,
+                        }
+                        if title:
+                            fallback_payload["title"] = title
+                        if data and isinstance(data, dict):
+                            fallback_payload["data"] = data
+
+                        res_fb = await client.post(fallback_url, headers=self._headers(), json=fallback_payload)
+                        if res_fb.status_code in (200, 201):
+                            self._known_entities.add(s_clean)
+                            self._known_entities.add(target_entity)
+                            logger.info("Successfully dispatched to %s via notify.send_message fallback", target_entity)
+                            return True, None
+
+                    err = f"Home Assistant rejected call with HTTP {res.status_code}: {res.text[:200]}"
+                    logger.warning(err)
+                    return False, err
         except httpx.TimeoutException:
             return False, "Request to Home Assistant Core API timed out."
         except Exception as exc:

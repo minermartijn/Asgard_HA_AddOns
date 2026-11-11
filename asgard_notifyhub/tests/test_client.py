@@ -154,3 +154,77 @@ def test_rest_client_http_errors_and_entities():
     assert any(s.ha_service == "living_room_tv" and s.target_type == "entity" for s in svcs_ok)
     assert any(s.ha_domain == "persistent_notification" and s.ha_service == "create" for s in svcs_ok)
     assert client_ok.last_error is None
+
+
+def test_rest_client_known_entity_dispatch():
+    """Verify that known notify entities route directly to notify.send_message."""
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+        calls.append({
+            "path": request.url.path,
+            "json": json.loads(request.content.decode("utf-8")),
+        })
+        if request.url.path == "/core/api/services/notify/send_message":
+            return httpx.Response(200, json=[{"success": True}])
+        return httpx.Response(400, text="Bad Request")
+
+    transport = httpx.MockTransport(handler)
+    client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
+    client._known_entities.add("mart_s25")
+    client._known_entities.add("notify.mart_s25")
+
+    ok, err = asyncio.run(
+        client.send_notification(
+            domain="notify",
+            service="mart_s25",
+            title="Test",
+            message="Hello Martijn",
+            data={"channel": "priority"},
+        )
+    )
+    assert ok is True
+    assert err is None
+    assert len(calls) == 1
+    assert calls[0]["path"] == "/core/api/services/notify/send_message"
+    assert calls[0]["json"]["entity_id"] == "notify.mart_s25"
+    assert calls[0]["json"]["message"] == "Hello Martijn"
+    assert calls[0]["json"]["title"] == "Test"
+    assert calls[0]["json"]["data"] == {"channel": "priority"}
+
+
+def test_rest_client_unknown_entity_fallback_on_400():
+    """Verify that when calling a notify service returns 400 Bad Request, it falls back to notify.send_message."""
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+        calls.append({
+            "path": request.url.path,
+            "json": json.loads(request.content.decode("utf-8")),
+        })
+        if request.url.path == "/core/api/services/notify/mart_s25":
+            return httpx.Response(400, text="400: Bad Request")
+        elif request.url.path == "/core/api/services/notify/send_message":
+            return httpx.Response(200, json=[{"success": True}])
+        return httpx.Response(404, text="Not Found")
+
+    transport = httpx.MockTransport(handler)
+    client = RestHomeAssistantClient("http://supervisor/core/api", token="tok", transport=transport)
+
+    ok, err = asyncio.run(
+        client.send_notification(
+            domain="notify",
+            service="mart_s25",
+            title="Alert",
+            message="Door opened",
+        )
+    )
+    assert ok is True
+    assert err is None
+    assert len(calls) == 2
+    assert calls[0]["path"] == "/core/api/services/notify/mart_s25"
+    assert calls[1]["path"] == "/core/api/services/notify/send_message"
+    assert calls[1]["json"]["entity_id"] == "notify.mart_s25"
+    assert "mart_s25" in client._known_entities

@@ -238,19 +238,21 @@
     el.modalCloseBtn.addEventListener('click', closeModal);
   }
 
-  // Close when clicking outside dialog content
+  // Close when clicking outside dialog content (backdrop overlay)
   if (el.appModal) {
     el.appModal.addEventListener('click', (e) => {
-      const rect = el.appModal.getBoundingClientRect();
-      const isInDialog = (
-        rect.top <= e.clientY &&
-        e.clientY <= rect.top + rect.height &&
-        rect.left <= e.clientX &&
-        e.clientX <= rect.left + rect.width
-      );
-      if (!isInDialog) {
+      // Never close if clicking inside modal content or its interactive elements
+      if (e.target.closest('.modal-content')) {
+        return;
+      }
+      // Backdrop click on native HTML5 <dialog> sets e.target to the dialog itself
+      if (e.target === el.appModal) {
         closeModal();
       }
+    });
+
+    el.appModal.addEventListener('close', () => {
+      el.modalBody.innerHTML = '';
     });
   }
 
