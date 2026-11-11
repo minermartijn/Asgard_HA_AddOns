@@ -270,7 +270,8 @@ class GoogleDriveBackupProvider:
                 date_utc = parse_datetime(raw.get("date"))
                 item_state = _clean_str(raw.get("state")) or "Backed Up"
                 size_bytes, size_str = parse_size_to_bytes(raw.get("size"))
-                b_type = _clean_str(raw.get("type"))
+                raw_b_type = _clean_str(raw.get("type"))
+                b_type = raw_b_type.lower() if raw_b_type is not None else None
                 prot = raw.get("protected")
                 is_prot = prot if isinstance(prot, bool) else None
 
@@ -352,7 +353,7 @@ class DemoGoogleDriveProvider:
                 backup_type="partial",
                 protected=True,
             ),
-            # Remote-only backup 1 (Drive Only)
+            # Remote-only backup 1 (Drive Only) - real Google Drive sensor omits type
             GoogleDriveBackupItem(
                 slug="demo_drive_001",
                 name="Demo: monthly archive 2026-10",
@@ -360,10 +361,10 @@ class DemoGoogleDriveProvider:
                 state="Drive Only",
                 size_bytes=1_250_000_000,
                 size_str="1.16 GB",
-                backup_type="full",
+                backup_type=None,
                 protected=True,
             ),
-            # Remote-only backup 2 (Drive Only)
+            # Remote-only backup 2 (Drive Only) - real Google Drive sensor omits type
             GoogleDriveBackupItem(
                 slug="demo_drive_002",
                 name="Demo: monthly archive 2026-09",
@@ -371,7 +372,7 @@ class DemoGoogleDriveProvider:
                 state="Drive Only",
                 size_bytes=1_210_000_000,
                 size_str="1.12 GB",
-                backup_type="full",
+                backup_type=None,
                 protected=True,
             ),
         ]

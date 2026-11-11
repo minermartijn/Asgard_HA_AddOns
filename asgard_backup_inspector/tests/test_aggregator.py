@@ -275,3 +275,81 @@ def test_aggregate_pending_upload():
     assert item.location_category == LocationCategory.PENDING.value
     assert item.sync_state == "Pending Upload"
     assert res.offsite_coverage == "incomplete"
+
+
+def test_aggregate_type_breakdown_and_unverified_full_coverage():
+    now = datetime.now(timezone.utc)
+    # 1 partial local backup, 2 Drive-only backups with None/unspecified type
+    local_backups = [
+        BackupSummary(
+            id="local01",
+            name="Manual_Full_Backup_11.11.26",
+            created_utc=now - timedelta(hours=2),
+            size_bytes=4_000_000_000,
+            backup_type="partial",  # Classified as partial by HA Supervisor
+        ),
+    ]
+    gdrive_items = [
+        GoogleDriveBackupItem(
+            slug="drive01",
+            name="Remote Backup 1",
+            date_utc=now - timedelta(days=1),
+            state="Drive Only",
+            size_bytes=20_000_000_000,
+            backup_type=None,  # Google Drive sensor omits type
+        ),
+        GoogleDriveBackupItem(
+            slug="drive02",
+            name="Remote Backup 2",
+            date_utc=now - timedelta(days=2),
+            state="Drive Only",
+            size_bytes=23_000_000_000,
+            backup_type=None,
+        ),
+    ]
+    gdrive_summary = GoogleDriveSummary(enabled=True, available=True, state="backed_up")
+
+    res = BackupAggregator.aggregate(
+        local_backups,
+        gdrive_summary=gdrive_summary,
+        gdrive_items=gdrive_items,
+        stale_threshold_hours=48,
+        now=now,
+    )
+
+    assert res.total_count == 3
+    assert res.full_count == 0
+    assert res.partial_count == 1
+    assert res.unknown_type_count == 2
+    assert res.partial_backup_bytes == 4_000_000_000
+    assert res.unknown_type_bytes == 43_000_000_000
+    assert res.full_backup_bytes == 0
+    assert res.known_size_total_bytes == 47_000_000_000
+
+    # Because 2 backups have unclassified type in Google Drive, coverage should be "unverified" rather than "not_detected"
+    assert res.full_backup_coverage == "unverified"
+
+
+def test_aggregate_confirmed_only_partial_marks_not_detected():
+    now = datetime.now(timezone.utc)
+    local_backups = [
+        BackupSummary(
+            id="local01",
+            name="Core Settings",
+            created_utc=now - timedelta(hours=1),
+            size_bytes=100_000,
+            backup_type="partial",
+        ),
+    ]
+    res = BackupAggregator.aggregate(
+        local_backups,
+        gdrive_summary=None,
+        gdrive_items=[],
+        stale_threshold_hours=48,
+        now=now,
+    )
+    assert res.full_count == 0
+    assert res.partial_count == 1
+    assert res.unknown_type_count == 0
+    # When all backups are confirmed partial and none are unclassified, coverage is "not_detected"
+    assert res.full_backup_coverage == "not_detected"

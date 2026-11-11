@@ -278,4 +278,38 @@ describe('Frontend Formatting Functions', () => {
     assert.equal(mockDOM['ind-offsite-coverage'].textContent, 'CONFIRMED');
     assert.equal(mockDOM['ind-full-coverage'].textContent, 'PRESENT');
   });
+
+  test('storage breakdown calculates full, partial, and unclassified bytes accurately', () => {
+    const backups = [
+      { size_bytes: 4_300_000_000, backup_type: 'partial' },
+      { size_bytes: 43_400_000_000, backup_type: null }, // Drive-only unclassified
+    ];
+
+    let fullBytes = 0;
+    let partialBytes = 0;
+    let unknownBytes = 0;
+
+    backups.forEach((b) => {
+      const sz = typeof b.size_bytes === 'number' && b.size_bytes > 0 ? b.size_bytes : 0;
+      const bType = (b.backup_type || '').toLowerCase();
+      if (bType === 'full') fullBytes += sz;
+      else if (bType === 'partial') partialBytes += sz;
+      else unknownBytes += sz;
+    });
+
+    const total = fullBytes + partialBytes + unknownBytes;
+    assert.equal(fullBytes, 0);
+    assert.equal(partialBytes, 4_300_000_000);
+    assert.equal(unknownBytes, 43_400_000_000);
+    assert.equal(total, 47_700_000_000);
+
+    const fullPct = Math.round((fullBytes / total) * 100);
+    const partialPct = Math.round((partialBytes / total) * 100);
+    const unknownPct = Math.max(0, 100 - fullPct - partialPct);
+
+    assert.equal(fullPct, 0);
+    assert.equal(partialPct, 9);
+    assert.equal(unknownPct, 91);
+    assert.equal(fullPct + partialPct + unknownPct, 100);
+  });
 });

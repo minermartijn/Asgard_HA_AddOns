@@ -181,10 +181,26 @@ function renderSummary(s) {
     safeSetText('count', String(s.total_count ?? 0));
     const fullCount = s.full_backup_count ?? 0;
     const partialCount = s.partial_backup_count ?? 0;
-    if (typeof s.local_count === 'number' && typeof s.remote_count === 'number' && s.remote_count > 0) {
-      safeSetText('count-breakdown', `${fullCount} full · ${partialCount} partial (${s.local_count} local · ${s.remote_count} in Drive)`);
+    const unknownCount = s.unknown_type_count ?? Math.max(0, (s.total_count ?? 0) - fullCount - partialCount);
+
+    const typeParts = [];
+    if (fullCount > 0) {
+      typeParts.push(`${fullCount} confirmed full`);
     } else {
-      safeSetText('count-breakdown', `${fullCount} full · ${partialCount} partial`);
+      typeParts.push('0 full');
+    }
+    if (partialCount > 0) {
+      typeParts.push(`${partialCount} confirmed partial`);
+    }
+    if (unknownCount > 0) {
+      typeParts.push(`${unknownCount} unclassified`);
+    }
+    const typeBreakdown = typeParts.join(' · ');
+
+    if (typeof s.local_count === 'number' && typeof s.remote_count === 'number' && s.remote_count > 0) {
+      safeSetText('count-breakdown', `${typeBreakdown} (${s.local_count} local · ${s.remote_count} in Drive)`);
+    } else {
+      safeSetText('count-breakdown', typeBreakdown);
     }
   } catch (err) {
     console.error('Error rendering count card:', err);
@@ -259,8 +275,19 @@ function renderSummary(s) {
     if (indFull) {
       const fCov = (s.full_backup_coverage || 'unknown').toLowerCase();
       indFull.textContent = fCov.replace('_', ' ').toUpperCase();
-      indFull.className = `status-badge ${fCov === 'present' ? 'status-present' : fCov === 'stale' ? 'status-stale' : 'status-not_detected'}`;
-      safeSetText('hint-full-coverage', fCov === 'present' ? 'Recent full backup available' : fCov === 'stale' ? 'Full backup is older than threshold' : 'No full backup detected');
+      if (fCov === 'present') {
+        indFull.className = 'status-badge status-present';
+        safeSetText('hint-full-coverage', 'Confirmed recent full backup detected');
+      } else if (fCov === 'stale') {
+        indFull.className = 'status-badge status-stale';
+        safeSetText('hint-full-coverage', 'Confirmed full backup is older than threshold');
+      } else if (fCov === 'unverified') {
+        indFull.className = 'status-badge status-unknown';
+        safeSetText('hint-full-coverage', 'No confirmed full backup; remote backups lack type metadata');
+      } else {
+        indFull.className = 'status-badge status-not_detected';
+        safeSetText('hint-full-coverage', 'All classified backups are partial (no full backup)');
+      }
     }
   } catch (err) {
     console.error('Error rendering redundancy indicators:', err);
@@ -362,14 +389,18 @@ function renderVisualizations(backups, summary) {
   try {
     let fullBytes = 0;
     let partialBytes = 0;
+    let unknownBytes = 0;
     const locationsMap = {};
 
     backups.forEach((b) => {
       const sz = typeof b.size_bytes === 'number' && b.size_bytes > 0 ? b.size_bytes : 0;
-      if (b.backup_type === 'full') {
+      const bType = (b.backup_type || '').toLowerCase();
+      if (bType === 'full') {
         fullBytes += sz;
-      } else if (b.backup_type === 'partial') {
+      } else if (bType === 'partial') {
         partialBytes += sz;
+      } else {
+        unknownBytes += sz;
       }
       const locs = b.locations && b.locations.length ? b.locations : [b.location || '.local'];
       locs.forEach((loc) => {
@@ -378,22 +409,29 @@ function renderVisualizations(backups, summary) {
       });
     });
 
-    const totalTypeBytes = fullBytes + partialBytes;
-    const fullPct = totalTypeBytes > 0 ? Math.round((fullBytes / totalTypeBytes) * 100) : 50;
-    const partialPct = 100 - fullPct;
+    const totalTypeBytes = fullBytes + partialBytes + unknownBytes;
+    const fullPct = totalTypeBytes > 0 ? Math.round((fullBytes / totalTypeBytes) * 100) : 0;
+    const partialPct = totalTypeBytes > 0 ? Math.round((partialBytes / totalTypeBytes) * 100) : 0;
+    const unknownPct = totalTypeBytes > 0 ? Math.max(0, 100 - fullPct - partialPct) : 0;
 
     const barFull = $('bar-full');
     const barPartial = $('bar-partial');
+    const barUnknown = $('bar-unknown');
     if (barFull) {
       barFull.style.width = `${fullPct}%`;
-      barFull.title = `Full: ${formatBytes(fullBytes)} (${fullPct}%)`;
+      barFull.title = `Confirmed Full: ${formatBytes(fullBytes)} (${fullPct}%)`;
     }
     if (barPartial) {
       barPartial.style.width = `${partialPct}%`;
-      barPartial.title = `Partial: ${formatBytes(partialBytes)} (${partialPct}%)`;
+      barPartial.title = `Confirmed Partial: ${formatBytes(partialBytes)} (${partialPct}%)`;
     }
-    safeSetText('full-storage-label', `Full: ${formatBytes(fullBytes)}`);
-    safeSetText('partial-storage-label', `Partial: ${formatBytes(partialBytes)}`);
+    if (barUnknown) {
+      barUnknown.style.width = `${unknownPct}%`;
+      barUnknown.title = `Unclassified Type: ${formatBytes(unknownBytes)} (${unknownPct}%)`;
+    }
+    safeSetText('full-storage-label', `Full: ${formatBytes(fullBytes)} (${fullPct}%)`);
+    safeSetText('partial-storage-label', `Partial: ${formatBytes(partialBytes)} (${partialPct}%)`);
+    safeSetText('unknown-storage-label', `Unclassified: ${formatBytes(unknownBytes)} (${unknownPct}%)`);
 
     // Storage Locations badges
     const locsContainer = $('storage-locations');
@@ -443,8 +481,11 @@ function renderVisualizations(backups, summary) {
       } else {
         recent.forEach((b) => {
           const item = document.createElement('div');
-          const isFull = b.backup_type === 'full';
-          item.className = `timeline-item ${isFull ? 'timeline-full' : 'timeline-partial'}`;
+          const bType = (b.backup_type || '').toLowerCase();
+          const isFull = bType === 'full';
+          const isPartial = bType === 'partial';
+          const typeClass = isFull ? 'timeline-full' : isPartial ? 'timeline-partial' : 'timeline-unknown';
+          item.className = `timeline-item ${typeClass}`;
 
           const ageSpan = document.createElement('span');
           ageSpan.className = 'timeline-age';
@@ -459,7 +500,8 @@ function renderVisualizations(backups, summary) {
 
           const sizeSpan = document.createElement('span');
           sizeSpan.className = 'hint';
-          sizeSpan.textContent = `${isFull ? 'Full' : 'Partial'} · ${formatBytes(b.size_bytes)}`;
+          const typeLabel = isFull ? 'Full' : isPartial ? 'Partial' : 'Unclassified';
+          sizeSpan.textContent = `${typeLabel} · ${formatBytes(b.size_bytes)}`;
 
           item.appendChild(ageSpan);
           item.appendChild(nameSpan);
@@ -564,7 +606,11 @@ function getFilteredAndSortedBackups() {
 
   // Type filter
   if (filterType !== 'all') {
-    list = list.filter((b) => b.backup_type === filterType);
+    if (filterType === 'unknown') {
+      list = list.filter((b) => !b.backup_type || !['full', 'partial'].includes(String(b.backup_type).toLowerCase()));
+    } else {
+      list = list.filter((b) => (b.backup_type || '').toLowerCase() === filterType);
+    }
   }
 
   // Location filter
@@ -730,9 +776,28 @@ function renderTable() {
       // 5. Type
       const tdType = document.createElement('td');
       const typeSpan = document.createElement('span');
-      const isFull = b.backup_type === 'full';
-      typeSpan.className = `type-badge ${isFull ? 'type-full' : 'type-partial'}`;
-      typeSpan.textContent = b.backup_type || 'Unknown';
+      const bType = (b.backup_type || '').toLowerCase();
+      const isFull = bType === 'full';
+      const isPartial = bType === 'partial';
+
+      if (isFull) {
+        typeSpan.className = 'type-badge type-full';
+        typeSpan.textContent = 'Full';
+        typeSpan.title = 'Confirmed full backup (Supervisor metadata)';
+      } else if (isPartial) {
+        typeSpan.className = 'type-badge type-partial';
+        typeSpan.textContent = 'Partial';
+        const nameLower = (b.name || '').toLowerCase();
+        if (nameLower.includes('full')) {
+          typeSpan.title = 'Classified as partial by Home Assistant Supervisor (usually occurs when folders or add-ons were excluded)';
+        } else {
+          typeSpan.title = 'Confirmed partial backup (Supervisor metadata)';
+        }
+      } else {
+        typeSpan.className = 'type-badge type-unknown';
+        typeSpan.textContent = 'Unclassified';
+        typeSpan.title = 'Type not reported by Google Drive Backup sensor metadata';
+      }
       tdType.appendChild(typeSpan);
       tr.appendChild(tdType);
 

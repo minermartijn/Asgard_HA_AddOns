@@ -45,6 +45,10 @@ def evaluate(
     unknown_date_count = len(items) - len(dated)
     full_count = sum(1 for b in items if b.backup_type == "full")
     partial_count = sum(1 for b in items if b.backup_type == "partial")
+    unknown_type_count = sum(1 for b in items if b.backup_type not in ("full", "partial"))
+    full_bytes = sum(b.size_bytes for b in items if b.backup_type == "full" and b.size_bytes is not None)
+    partial_bytes = sum(b.size_bytes for b in items if b.backup_type == "partial" and b.size_bytes is not None)
+    unknown_type_bytes = sum(b.size_bytes for b in items if b.backup_type not in ("full", "partial") and b.size_bytes is not None)
 
     newest = max(dated) if dated else None
     age_seconds: Optional[int] = None
@@ -81,7 +85,21 @@ def evaluate(
 
     c_fresh = Freshness.UNKNOWN if cloud_freshness is None else cloud_freshness
     off_cov = "unknown" if offsite_coverage is None else offsite_coverage
-    full_cov = "unknown" if full_backup_coverage is None else full_backup_coverage
+    if full_backup_coverage is not None:
+        full_cov = full_backup_coverage
+    else:
+        full_dated = [b.created_utc for b in items if b.backup_type == "full" and b.created_utc is not None]
+        if not full_dated:
+            if unknown_type_count > 0:
+                full_cov = "unverified"
+            elif len(items) == 0:
+                full_cov = "unknown"
+            else:
+                full_cov = "not_detected"
+        else:
+            newest_full = max(full_dated)
+            full_age = max(0, int((now - newest_full).total_seconds()))
+            full_cov = "present" if full_age <= stale_threshold_hours * 3600 else "stale"
 
     return HealthSummary(
         freshness=freshness,
@@ -89,6 +107,10 @@ def evaluate(
         total_count=len(items),
         full_backup_count=full_count,
         partial_backup_count=partial_count,
+        unknown_type_count=unknown_type_count,
+        full_backup_bytes=full_bytes,
+        partial_backup_bytes=partial_bytes,
+        unknown_type_bytes=unknown_type_bytes,
         known_size_total_bytes=sum(known_sizes),
         unknown_size_count=unknown_size_count,
         unknown_date_count=unknown_date_count,

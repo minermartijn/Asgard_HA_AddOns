@@ -1,6 +1,6 @@
 # ASGARD Backup Inspector
 
-> **Version: 0.3.0.** Read-only dashboard for Home Assistant and Google Drive backup metadata. Read [Limitations](#limitations) before relying on it.
+> **Version: 0.3.1.** Read-only dashboard for Home Assistant and Google Drive backup metadata. Read [Limitations](#limitations) before relying on it.
 
 A read-only dashboard, opened from the Home Assistant sidebar, that answers critical backup questions: **is a recent backup listed, and is an off-site copy confirmed?**
 

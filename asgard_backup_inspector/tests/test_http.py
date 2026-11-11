@@ -33,9 +33,28 @@ class ScriptedSource:
         return await item.fetch()
 
 
+class _ClientInjectionMiddleware:
+    def __init__(self, app, client):
+        self.app = app
+        self.client = client
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http" and self.client is not None:
+            scope = dict(scope)
+            scope["client"] = self.client
+        await self.app(scope, receive, send)
+
+
+def make_test_client(app, client=SUPERVISOR_PROXY):
+    try:
+        return TestClient(app, client=client)
+    except TypeError:
+        return TestClient(_ClientInjectionMiddleware(app, client))
+
+
 def client_for(source, **overrides):
     settings = Settings(**{"min_refresh_interval_seconds": 0.0, **overrides})
-    return TestClient(create_app(settings=settings, source=source), client=SUPERVISOR_PROXY)
+    return make_test_client(create_app(settings=settings, source=source))
 
 
 def mock(name):
@@ -162,7 +181,7 @@ def test_works_with_ingress_style_headers():
 
 def test_requests_not_from_supervisor_proxy_are_refused():
     app = create_app(settings=Settings(), source=mock("backups_ok.json"))
-    other = TestClient(app, client=("172.30.33.5", 1234))
+    other = make_test_client(app, client=("172.30.33.5", 1234))
     for path in ("/", "/api/summary", "/api/backups", "/api/health", "/static/app.js"):
         assert other.get(path).status_code == 403
     assert other.post("/api/refresh").status_code == 403
@@ -241,7 +260,7 @@ def test_mock_source_missing_file(tmp_path):
 
 def test_api_history_endpoint(tmp_path):
     settings = Settings(data_dir=str(tmp_path), min_refresh_interval_seconds=0.0)
-    c = TestClient(create_app(settings=settings, source=mock("backups_ok.json")), client=SUPERVISOR_PROXY)
+    c = make_test_client(create_app(settings=settings, source=mock("backups_ok.json")))
     # Ensure fresh triggers snapshot recording
     r = c.get("/api/summary")
     assert r.status_code == 200
@@ -266,7 +285,7 @@ def test_api_summary_with_cloud_provider():
     cloud = DemoGoogleDriveProvider(enabled=True)
     settings = Settings(min_refresh_interval_seconds=0.0, stale_threshold_hours=24 * 365 * 10)
     app = create_app(settings=settings, source=mock("backups_ok.json"), cloud_provider=cloud)
-    c = TestClient(app, client=SUPERVISOR_PROXY)
+    c = make_test_client(app)
 
     s = c.get("/api/summary").json()
     assert s["api_status"] == "ok"
@@ -298,7 +317,7 @@ def test_api_summary_cloud_provider_error_isolation():
 
     settings = Settings(min_refresh_interval_seconds=0.0)
     app = create_app(settings=settings, source=mock("backups_ok.json"), cloud_provider=FaultyCloudProvider())
-    c = TestClient(app, client=SUPERVISOR_PROXY)
+    c = make_test_client(app)
 
     # Local backups must still succeed even when cloud provider raises!
     s = c.get("/api/summary").json()
