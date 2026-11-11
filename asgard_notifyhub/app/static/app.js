@@ -121,8 +121,18 @@
   }
 
   // --- API Client ---
+  // Home Assistant Ingress serves this page below /api/hassio_ingress/<session>/.
+  // Root-absolute /api/... paths accidentally hit Home Assistant Core, not NotifyHub.
+  // Resolve against the document URL to work both in Ingress and at localhost:8098/.
+  function apiUrl(endpoint) {
+    if (typeof endpoint !== 'string' || !endpoint.startsWith('/api/')) {
+      throw new Error('Invalid NotifyHub API endpoint');
+    }
+    return new URL(endpoint.slice(1), document.baseURI).toString();
+  }
+
   async function apiGet(endpoint) {
-    const res = await fetch(endpoint);
+    const res = await fetch(apiUrl(endpoint));
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || `HTTP ${res.status}`);
@@ -131,7 +141,7 @@
   }
 
   async function apiPost(endpoint, body) {
-    const res = await fetch(endpoint, {
+    const res = await fetch(apiUrl(endpoint), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -144,7 +154,7 @@
   }
 
   async function apiDelete(endpoint) {
-    const res = await fetch(endpoint, { method: 'DELETE' });
+    const res = await fetch(apiUrl(endpoint), { method: 'DELETE' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || `HTTP ${res.status}`);
@@ -231,9 +241,9 @@
       el.cardHaBadge.className = `status-badge ${haClass}`;
     }
     if (el.statHaConn) el.statHaConn.textContent = haStatus;
-    if (el.statServicesCount) el.statServicesCount.textContent = `${s.services_discovered} notify actions discovered`;
+    if (el.statServicesCount) el.statServicesCount.textContent = `${s.discovered_services_count} notify actions discovered`;
     if (el.statSubmissions) el.statSubmissions.textContent = String(s.submissions_24h);
-    if (el.statQuiet) el.statQuiet.textContent = String(s.quiet_silenced_24h);
+    if (el.statQuiet) el.statQuiet.textContent = String(s.blocked_quiet_hours_24h);
     if (el.statRecipients) el.statRecipients.textContent = String(s.recipients_count);
     if (el.statRoutesHint) el.statRoutesHint.textContent = `${s.routes_count} active routes mapped`;
     if (el.tagDiscoveredCount) el.tagDiscoveredCount.textContent = `${state.services.length} discovered`;
