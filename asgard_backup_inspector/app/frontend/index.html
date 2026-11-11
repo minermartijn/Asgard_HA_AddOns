@@ -169,17 +169,19 @@
             <div class="bar-labels">
               <span id="full-storage-label">Full: –</span>
               <span id="partial-storage-label">Partial: –</span>
+              <span id="unknown-storage-label">Unclassified: –</span>
             </div>
             <div class="stacked-bar" id="storage-stacked-bar">
-              <div id="bar-full" class="bar-segment bar-full" title="Full Backups"></div>
-              <div id="bar-partial" class="bar-segment bar-partial" title="Partial Backups"></div>
+              <div id="bar-full" class="bar-segment bar-full" title="Confirmed Full Backups"></div>
+              <div id="bar-partial" class="bar-segment bar-partial" title="Confirmed Partial Backups"></div>
+              <div id="bar-unknown" class="bar-segment bar-unknown" title="Unclassified Type Backups"></div>
             </div>
           </div>
           <div class="storage-locations" id="storage-locations">
             <!-- Location badges populated dynamically -->
           </div>
           <p class="storage-disclaimer">
-            Reflects uncompressed/archive size reported by Home Assistant. Actual disk usage may differ.
+            Reflects archive sizes across all classified and unclassified backups. Remote Google Drive backups omit type metadata in sensor attributes.
           </p>
         </div>
       </section>
@@ -228,8 +230,9 @@
           <div class="filters-row">
             <select id="filter-type" aria-label="Filter by backup type">
               <option value="all">All Types</option>
-              <option value="full">Full Backups</option>
-              <option value="partial">Partial Backups</option>
+              <option value="full">Confirmed Full</option>
+              <option value="partial">Confirmed Partial</option>
+              <option value="unknown">Unclassified Type</option>
             </select>
             <select id="filter-location" aria-label="Filter by storage location">
               <option value="all">All Locations</option>

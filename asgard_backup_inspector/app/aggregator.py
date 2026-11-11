@@ -35,6 +35,10 @@ class AggregationResult:
     remote_only_count: int
     full_count: int
     partial_count: int
+    unknown_type_count: int
+    full_backup_bytes: int
+    partial_backup_bytes: int
+    unknown_type_bytes: int
     known_size_total_bytes: int
     unknown_size_count: int
     unknown_date_count: int
@@ -171,6 +175,11 @@ class BackupAggregator:
 
         full_count = sum(1 for b in merged if b.backup_type == "full")
         partial_count = sum(1 for b in merged if b.backup_type == "partial")
+        unknown_type_count = sum(1 for b in merged if b.backup_type not in ("full", "partial"))
+
+        full_backup_bytes = sum(b.size_bytes for b in merged if b.backup_type == "full" and b.size_bytes is not None)
+        partial_backup_bytes = sum(b.size_bytes for b in merged if b.backup_type == "partial" and b.size_bytes is not None)
+        unknown_type_bytes = sum(b.size_bytes for b in merged if b.backup_type not in ("full", "partial") and b.size_bytes is not None)
 
         known_sizes = [b.size_bytes for b in merged if b.size_bytes is not None]
         known_size_total_bytes = sum(known_sizes)
@@ -229,7 +238,12 @@ class BackupAggregator:
         # Full backup coverage
         full_dated = [b.created_utc for b in merged if b.backup_type == "full" and b.created_utc is not None]
         if not full_dated:
-            full_backup_coverage = "not_detected"
+            if unknown_type_count > 0:
+                full_backup_coverage = "unverified"
+            elif len(merged) == 0:
+                full_backup_coverage = "unknown"
+            else:
+                full_backup_coverage = "not_detected"
         else:
             newest_full = max(full_dated)
             full_age = max(0, int((now - newest_full).total_seconds()))
@@ -259,6 +273,10 @@ class BackupAggregator:
             remote_only_count=remote_only_count,
             full_count=full_count,
             partial_count=partial_count,
+            unknown_type_count=unknown_type_count,
+            full_backup_bytes=full_backup_bytes,
+            partial_backup_bytes=partial_backup_bytes,
+            unknown_type_bytes=unknown_type_bytes,
             known_size_total_bytes=known_size_total_bytes,
             unknown_size_count=unknown_size_count,
             unknown_date_count=unknown_date_count,

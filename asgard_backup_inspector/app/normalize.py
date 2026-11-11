@@ -85,12 +85,14 @@ def normalize_backup(raw: Any) -> Optional[BackupSummary]:
             elif isinstance(loc, str):
                 locations.append(loc)
     location = raw.get("location")
+    raw_type = _opt_str(raw.get("type"))
+    b_type = raw_type.lower() if raw_type is not None else None
     return BackupSummary(
         id=slug,
         name=_opt_str(raw.get("name")),
         created_utc=parse_datetime(raw.get("date")),
         size_bytes=parse_size_bytes(raw),
-        backup_type=_opt_str(raw.get("type")),
+        backup_type=b_type,
         location=".local" if location is None and "location" in raw else _opt_str(location),
         locations=locations,
         protected=_opt_bool(raw.get("protected")),

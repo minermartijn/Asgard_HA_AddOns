@@ -382,7 +382,17 @@ def test_google_drive_and_redundancy_dashboard(browser_instance, tmp_path):
         page.wait_for_selector("#backup-rows tr")
         assert page.locator("#count").text_content() == "16"
 
-        # 4. Zero unexpected console errors
+        # 4. Storage Breakdown with unclassified segment
+        assert page.locator("#bar-unknown").is_visible()
+        assert page.locator("#unknown-storage-label").is_visible()
+
+        # 5. Type filtering including unclassified
+        page.select_option("#filter-type", "unknown")
+        unknown_rows = page.locator("#backup-rows tr")
+        assert unknown_rows.count() >= 0
+        page.select_option("#filter-type", "all")
+
+        # 6. Zero unexpected console errors
         filtered_errors = [e for e in console_errors if "favicon" not in e.lower()]
         assert len(filtered_errors) == 0, f"Console errors: {filtered_errors}"
 

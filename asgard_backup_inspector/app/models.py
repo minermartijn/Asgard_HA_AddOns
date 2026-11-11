@@ -48,7 +48,8 @@ class OffsiteCoverage(str, Enum):
 class FullBackupCoverage(str, Enum):
     PRESENT = "present"          # fresh full backup exists
     STALE = "stale"              # full backup exists but is older than threshold
-    NOT_DETECTED = "not_detected" # only partial backups or none found
+    NOT_DETECTED = "not_detected" # only confirmed partial backups found
+    UNVERIFIED = "unverified"    # no confirmed full backup, but unclassified backups exist
     UNKNOWN = "unknown"
 
 
@@ -102,6 +103,10 @@ class HealthSummary(BaseModel):
     total_count: int
     full_backup_count: int = 0
     partial_backup_count: int = 0
+    unknown_type_count: int = 0
+    full_backup_bytes: int = 0
+    partial_backup_bytes: int = 0
+    unknown_type_bytes: int = 0
     known_size_total_bytes: int
     unknown_size_count: int
     unknown_date_count: int

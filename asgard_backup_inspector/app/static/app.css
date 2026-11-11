@@ -184,7 +184,7 @@ main { padding: clamp(1rem, 3vw, 2.5rem); max-width: 1350px; margin: 0 auto; }
 
 /* Stacked Bar */
 .bar-chart-container { margin: 1rem 0 0.8rem; }
-.bar-labels { display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.4rem; }
+.bar-labels { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.4rem; }
 .stacked-bar {
   display: flex; height: 16px; border-radius: 9999px; overflow: hidden; background: var(--surface-alt);
   border: 1px solid var(--border);
@@ -192,6 +192,7 @@ main { padding: clamp(1rem, 3vw, 2.5rem); max-width: 1350px; margin: 0 auto; }
 .bar-segment { height: 100%; transition: width 0.3s ease; }
 .bar-full { background: #3b82f6; }
 .bar-partial { background: #8b5cf6; }
+.bar-unknown { background: #64748b; }
 .storage-locations { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0; }
 .storage-disclaimer, .timeline-disclaimer { font-size: 0.75rem; color: var(--text-muted); margin: 0.6rem 0 0; }
 
@@ -205,6 +206,7 @@ main { padding: clamp(1rem, 3vw, 2.5rem); max-width: 1350px; margin: 0 auto; }
 }
 .timeline-item.timeline-full { border-left: 3px solid #3b82f6; }
 .timeline-item.timeline-partial { border-left: 3px solid #8b5cf6; }
+.timeline-item.timeline-unknown { border-left: 3px solid #64748b; }
 .timeline-age { font-weight: 700; color: var(--text); }
 .timeline-name { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -254,6 +256,7 @@ th.sortable:hover { color: var(--text); }
 }
 .type-full { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
 .type-partial { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+.type-unknown { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); }
 .loc-badge {
   font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 4px; background: var(--surface-alt);
   border: 1px solid var(--border); color: var(--text-muted); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

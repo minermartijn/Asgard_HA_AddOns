@@ -2,6 +2,15 @@
 
 All notable changes to ASGARD Backup Inspector will be documented in this file.
 
+## [0.3.1] - 2026-11-11
+
+### Added
+- **Three-Way Type Classification:** Distinguishes between Confirmed Full backups, Confirmed Partial backups, and Unclassified backups (for remote archives where Google Drive Backup sensor metadata omits type attributes).
+- **Unclassified Storage Segment:** Storage breakdown chart now includes full, partial, and unclassified remote storage segments, reconciling the sum with Known Total Storage (e.g. 4.3 GB partial + 43.4 GB unclassified = 47.7 GB total).
+- **Unverified Full Coverage State:** When no confirmed full backup is found but unclassified remote backups exist, Full-Backup Coverage displays `UNVERIFIED` rather than misleadingly claiming no full backups exist.
+- **Supervisor Partial Classification Tooltip:** Explanatory tooltip on partial badges explaining that Home Assistant Supervisor classifies backups as partial when specific folders or add-ons were excluded.
+- **Unclassified Type Filter:** Dropdown filter now includes *Unclassified Type* alongside *Confirmed Full* and *Confirmed Partial*.
+
 ## [0.3.0] - 2026-11-11
 
 ### Added
