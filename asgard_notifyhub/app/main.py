@@ -39,9 +39,11 @@ def create_app(
 
     if service is None:
         storage = Storage(cfg.db_path)
-        if cfg.demo_mode or not cfg.supervisor_token:
+        if cfg.demo_mode:
             client = DemoHomeAssistantClient()
         else:
+            # Never invent notification devices when the Supervisor token is absent.
+            # The real client reports disconnected/unavailable without credentials.
             client = RestHomeAssistantClient(core_api_url=cfg.core_api_url, token=cfg.supervisor_token)
         svc = NotifyHubService(storage=storage, ha_client=client, demo_mode=cfg.demo_mode)
     else:
