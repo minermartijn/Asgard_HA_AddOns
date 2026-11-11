@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 - 2026-11-11
+
+### Fixed
+- **Static Assets 404 Under Ingress**: Removed `request.scope["root_path"]` modification in HTTP middleware that caused Starlette `StaticFiles` Mount to fail routing on `/static/app.css` and `/static/app.js` when Home Assistant sends `X-Ingress-Path`. Static assets now reliably return 200 OK.
+- **Cache-Busting Assets**: Bumped asset cache-busting queries to `?v=0.1.3`.
+
+
 ## 0.1.2 - 2026-11-11
 
 ### Fixed

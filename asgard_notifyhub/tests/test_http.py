@@ -222,3 +222,14 @@ def test_preview_and_send_api(client):
     purge_res = client.post("/api/history/purge?days=0", json={})
     assert purge_res.status_code == 200
     assert purge_res.json()["status"] == "purged"
+
+
+def test_static_files_with_ingress_header(client):
+    ingress_hdr = "/api/hassio_ingress/custom-session-token-42"
+    r_css = client.get("/static/app.css", headers={"X-Ingress-Path": ingress_hdr})
+    assert r_css.status_code == 200
+    assert "text/css" in r_css.headers.get("content-type", "")
+
+    r_js = client.get("/static/app.js", headers={"X-Ingress-Path": ingress_hdr})
+    assert r_js.status_code == 200
+    assert "javascript" in r_js.headers.get("content-type", "")
