@@ -157,3 +157,23 @@ def test_preview_and_send_api(client):
     purge_res = client.post("/api/history/purge?days=0", json={})
     assert purge_res.status_code == 200
     assert purge_res.json()["status"] == "purged"
+
+
+def test_no_token_does_not_fake_home_assistant_connection(tmp_path):
+    from app.main import create_app
+    from app.settings import Settings
+    from conftest import make_test_client
+
+    settings = Settings(
+        data_dir=tmp_path,
+        supervisor_token=None,
+        demo_mode=False,
+        allowed_source_ips="172.30.32.2",
+    )
+    with make_test_client(create_app(settings=settings)) as c:
+        summary = c.get("/api/summary")
+    assert summary.status_code == 200
+    data = summary.json()
+    assert data["demo_mode"] is False
+    assert data["ha_connected"] is False
+    assert data["discovered_services_count"] == 0
