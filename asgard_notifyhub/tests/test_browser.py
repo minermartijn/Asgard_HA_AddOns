@@ -55,7 +55,7 @@ def get_free_port() -> int:
 
 
 class AppServer:
-    def __init__(self, tmp_path: Path):
+    def __init__(self, tmp_path: Path, ingress_prefix: str = ""):
         self.port = get_free_port()
         db_path = tmp_path / "notifyhub_browser.db"
         self.storage = Storage(db_path)
@@ -69,7 +69,12 @@ class AppServer:
             dedup_window_seconds=60,
         )
         self.app = create_app(settings=self.settings, service=self.service)
-        self.server = uvicorn.Server(uvicorn.Config(self.app, host="127.0.0.1", port=self.port, log_level="error"))
+        served_app = self.app
+        if ingress_prefix:
+            from starlette.applications import Starlette
+            from starlette.routing import Mount
+            served_app = Starlette(routes=[Mount(ingress_prefix, app=self.app)])
+        self.server = uvicorn.Server(uvicorn.Config(served_app, host="127.0.0.1", port=self.port, log_level="error"))
         self.thread = threading.Thread(target=self.server.run, daemon=True)
         self.thread.start()
         time.sleep(0.5)
@@ -196,3 +201,47 @@ def test_mobile_viewport_rendering(browser_instance, running_server):
     assert page.is_visible(".cards-grid")
 
     page.close()
+
+
+def test_ingress_prefix_api_routes_and_recipient_creation(browser_instance, tmp_path):
+    """In HA, /api routes must remain below the opaque Ingress session path.
+
+    This is the regression test for the live UI returning 404 from requests to
+    Home Assistant's root /api instead of NotifyHub's Ingress endpoint.
+    """
+    prefix = "/api/hassio_ingress/synthetic-session"
+    srv = AppServer(tmp_path, ingress_prefix=prefix)
+    page = browser_instance.new_page()
+    requests = []
+    bad_responses = []
+    page.on("request", lambda request: requests.append(request.url))
+    page.on("response", lambda response: bad_responses.append(
+        (response.status, response.url)
+    ) if response.status >= 400 else None)
+
+    try:
+        page.goto(f"http://127.0.0.1:{srv.port}{prefix}/")
+        page.wait_for_selector(".service-chip")
+
+        page.click('button[data-tab="tab-recipients"]')
+        page.click("#btn-add-recipient")
+        page.wait_for_selector("#rec-name")
+        page.fill("#rec-name", "Ingress Test Person")
+        page.fill("#rec-tz", "Europe/Amsterdam")
+        page.click('#modal-rec-form button[type="submit"]')
+        page.wait_for_function('() => document.body.innerText.includes("Ingress Test Person")')
+
+        page.click('button[data-tab="tab-history"]')
+        page.wait_for_function(
+            '() => !document.body.innerText.includes("History load error:")'
+        )
+        # All requested application API endpoints must use the same ingress prefix.
+        for endpoint in (
+            "/api/summary", "/api/services", "/api/recipients",
+            "/api/groups", "/api/policies", "/api/history",
+        ):
+            assert any(prefix + endpoint in url for url in requests), (endpoint, requests)
+        assert not bad_responses, bad_responses
+    finally:
+        page.close()
+        srv.close()
