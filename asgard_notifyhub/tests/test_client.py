@@ -64,3 +64,18 @@ def test_rest_client_security_boundary():
     )
     assert ok is False
     assert "Security Violation" in (err or "")
+
+
+def test_missing_supervisor_token_does_not_return_fake_services():
+    client = RestHomeAssistantClient(core_api_url="http://supervisor/core/api", token=None)
+    services = asyncio.run(client.discover_services())
+    assert services == []
+
+    ok, err = asyncio.run(client.send_notification(
+        domain="persistent_notification",
+        service="create",
+        title="Test",
+        message="Should not be sent without credentials",
+    ))
+    assert ok is False
+    assert err is not None
