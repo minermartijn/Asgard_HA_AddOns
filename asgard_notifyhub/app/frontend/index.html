@@ -4,9 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ASGARD NotifyHub</title>
-  <base href="./" />
+  <!-- INGRESS_BASE -->
+  <script>
+    window.__INGRESS_BASE__ = null;
+    (function() {
+      if (!window.__INGRESS_BASE__) {
+        var m = window.location.pathname.match(/^(\/api\/hassio_ingress\/[^\/]+)/);
+        if (m) window.__INGRESS_BASE__ = m[1] + '/';
+      }
+      var existingBase = document.querySelector('base');
+      if (!existingBase && window.__INGRESS_BASE__) {
+        var b = document.createElement('base');
+        b.href = window.__INGRESS_BASE__;
+        document.head.insertBefore(b, document.head.firstChild);
+      }
+    })();
+  </script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
-  <link rel="stylesheet" href="static/app.css" />
+  <link rel="stylesheet" href="static/app.css?v=0.1.2" />
 </head>
 <body>
   <div class="layout">
@@ -242,11 +257,11 @@
 
     <!-- Diagnostics Footer -->
     <footer class="meta">
-      <span>ASGARD NotifyHub v<span id="footer-version">0.1.1</span></span>
+      <span>ASGARD NotifyHub v<span id="footer-version">0.1.2</span></span>
       <span>Supervisor Ingress API · SQLite Persistence · Strict Notify Allowlist</span>
     </footer>
   </div>
 
-  <script src="static/app.js"></script>
+  <script src="static/app.js?v=0.1.2"></script>
 </body>
 </html>

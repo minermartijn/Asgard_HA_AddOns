@@ -253,3 +253,35 @@ def test_mobile_viewport_under_ingress(browser_instance, ingress_server):
     assert page.is_visible(".cards-grid")
 
     page.close()
+
+
+def test_ingress_without_trailing_slash_loads_and_resolves(browser_instance, ingress_server):
+    """Verifies that navigating without trailing slash properly resolves assets and APIs."""
+    page = browser_instance.new_page()
+    console_errors = []
+    escaped_requests = []
+
+    page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" and "favicon" not in msg.text else None)
+    page.on("pageerror", lambda exc: console_errors.append(str(exc)))
+
+    def on_request(request):
+        url = request.url
+        expected_base = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}"
+        if not url.startswith(expected_base) and not url.endswith("/favicon.ico"):
+            escaped_requests.append(url)
+
+    page.on("request", on_request)
+
+    # Ingress URL WITHOUT trailing slash
+    ingress_url_no_slash = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}"
+    page.goto(ingress_url_no_slash)
+    page.wait_for_selector("#stat-ha-conn")
+
+    assert page.is_visible("#tab-dashboard")
+    assert page.inner_text("#stat-ha-conn") in ("Demo Mode", "Connected")
+
+    # Assert 0 console errors and 0 escaped requests
+    assert len(console_errors) == 0, f"Console errors: {console_errors}"
+    assert len(escaped_requests) == 0, f"Requests escaped Ingress prefix: {escaped_requests}"
+
+    page.close()

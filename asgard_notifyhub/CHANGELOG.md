@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2 - 2026-11-11
+
+### Fixed
+- **Ingress Base & Token Resolution**: Injected dynamic `<base href="...">` and `window.__INGRESS_BASE__` based on Home Assistant's `X-Ingress-Path` header, guaranteeing all API endpoints (`api/recipients`, `api/history`, `api/summary`) resolve within the Ingress session even when the iframe or external URL lacks a trailing slash.
+- **Root Path & Redirect Security**: Configured ASGI `root_path` and automatic `Location` header rewrites in Ingress middleware to prevent 307 redirects from escaping to Home Assistant Core's root domain.
+- **Cache-Busting & Aggressive Cache Control**: Added `Cache-Control: no-cache, no-store, must-revalidate` and cache-busting query strings (`?v=0.1.2`) to frontend assets to prevent stale browser caches.
+- **Unbuffered Logging & Access Logs**: Added `PYTHONUNBUFFERED=1` to container environment and `--access-log` with unbuffered Python (`-u`) to `run.sh`, ensuring all requests and errors are immediately visible in Home Assistant App logs.
+
+
 All notable changes to ASGARD NotifyHub will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

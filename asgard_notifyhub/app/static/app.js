@@ -9,6 +9,13 @@
   function getApiUrl(endpoint) {
     if (!endpoint) return '';
     const clean = String(endpoint).replace(/^\/+/, '');
+    if (window.__INGRESS_BASE__) {
+      return `${window.__INGRESS_BASE__.replace(/\/+$/, '')}/${clean}`;
+    }
+    const ingressMatch = window.location.pathname.match(/^(\/api\/hassio_ingress\/[^\/]+)/);
+    if (ingressMatch) {
+      return `${ingressMatch[1]}/${clean}`;
+    }
     let dir = window.location.pathname || '/';
     if (dir.endsWith('/index.html')) {
       dir = dir.slice(0, -10);

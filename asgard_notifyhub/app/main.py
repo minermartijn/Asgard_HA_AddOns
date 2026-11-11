@@ -76,18 +76,36 @@ def create_app(
         if not allow_all:
             client_host = request.client.host if request.client else None
             if not client_host:
+                logger.warning("Rejected request: missing client IP")
                 return JSONResponse(status_code=403, content={"detail": "Forbidden: missing client IP"})
             try:
                 c_ip = ipaddress.ip_address(client_host)
                 if not any(c_ip in net for net in allowed_networks):
+                    logger.warning("Rejected request from untrusted IP %s for path %s", client_host, request.url.path)
                     return JSONResponse(status_code=403, content={"detail": "Forbidden: untrusted source IP"})
             except ValueError:
+                logger.warning("Rejected request with invalid client IP: %s", client_host)
                 return JSONResponse(status_code=403, content={"detail": "Forbidden: invalid source IP"})
 
+        # Support Home Assistant Ingress dynamic root path
+        ingress_path = request.headers.get("x-ingress-path", "")
+        if ingress_path:
+            request.scope["root_path"] = ingress_path.rstrip("/")
+
         response: Response = await call_next(request)
+
+        # Fix any redirect Location headers to retain Ingress path prefix
+        if ingress_path and response.status_code in (301, 302, 307, 308):
+            loc = response.headers.get("location", "")
+            if loc.startswith("/") and not loc.startswith(ingress_path):
+                response.headers["location"] = f"{ingress_path.rstrip('/')}{loc}"
+
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
         return response
 
     if STATIC_DIR.exists():
@@ -96,11 +114,21 @@ def create_app(
     # ---- Routes ----
 
     @app.get("/")
-    async def index():
+    @app.get("/index.html")
+    async def index(request: Request):
         index_file = FRONTEND_DIR / "index.html"
         if not index_file.exists():
             return JSONResponse({"status": "NotifyHub running", "version": __version__})
-        return FileResponse(index_file)
+
+        ingress_path = request.headers.get("x-ingress-path", "")
+        content = index_file.read_text(encoding="utf-8")
+        if ingress_path:
+            base_url = ingress_path.rstrip("/") + "/"
+            content = content.replace("<!-- INGRESS_BASE -->", f'<base href="{base_url}">')
+            content = content.replace("window.__INGRESS_BASE__ = null;", f'window.__INGRESS_BASE__ = "{base_url}";')
+        else:
+            content = content.replace("<!-- INGRESS_BASE -->", '<base href="./">')
+        return Response(content=content, media_type="text/html")
 
     @app.get("/favicon.ico")
     async def favicon():
@@ -110,6 +138,7 @@ def create_app(
         return Response(status_code=204)
 
     @app.get("/api/health")
+    @app.get("/api/health/")
     async def health():
         return {
             "status": "ok",
@@ -118,21 +147,25 @@ def create_app(
         }
 
     @app.get("/api/summary")
+    @app.get("/api/summary/")
     async def summary():
         return await svc.get_summary()
 
     @app.get("/api/services")
+    @app.get("/api/services/")
     async def list_services(refresh: bool = False):
         services = await svc.get_services(force_refresh=refresh)
         return {"services": services}
 
     # Recipients
     @app.get("/api/recipients")
+    @app.get("/api/recipients/")
     async def get_recipients():
         recipients = svc.storage.list_recipients()
         return {"recipients": recipients}
 
     @app.post("/api/recipients")
+    @app.post("/api/recipients/")
     async def save_recipient(payload: dict):
         rid = str(payload.get("id") or f"rec_{uuid.uuid4().hex[:8]}")
         name = str(payload.get("name", "")).strip()
@@ -153,6 +186,7 @@ def create_app(
 
     # Routes
     @app.post("/api/routes")
+    @app.post("/api/routes/")
     async def save_route(payload: dict):
         rt_id = str(payload.get("id") or f"rt_{uuid.uuid4().hex[:8]}")
         rec_id = str(payload.get("recipient_id", "")).strip()
@@ -186,11 +220,13 @@ def create_app(
 
     # Groups
     @app.get("/api/groups")
+    @app.get("/api/groups/")
     async def get_groups():
         groups = svc.storage.list_groups()
         return {"groups": groups}
 
     @app.post("/api/groups")
+    @app.post("/api/groups/")
     async def save_group(payload: dict):
         gid = str(payload.get("id") or f"grp_{uuid.uuid4().hex[:8]}")
         name = str(payload.get("name", "")).strip()
@@ -211,11 +247,13 @@ def create_app(
 
     # Policies
     @app.get("/api/policies")
+    @app.get("/api/policies/")
     async def get_policies(target_id: Optional[str] = None):
         policies = svc.storage.list_policies(target_id=target_id)
         return {"policies": policies}
 
     @app.post("/api/policies")
+    @app.post("/api/policies/")
     async def save_policy(payload: dict):
         pid = str(payload.get("id") or f"pol_{uuid.uuid4().hex[:8]}")
         tid = str(payload.get("target_id", "")).strip()
@@ -295,6 +333,7 @@ def create_app(
 
     # History & Purge
     @app.get("/api/history")
+    @app.get("/api/history/")
     async def list_history(limit: int = 100):
         records = svc.storage.list_history(limit=limit)
         return {"history": records}

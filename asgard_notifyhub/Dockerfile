@@ -10,4 +10,6 @@ COPY run.sh /run.sh
 
 RUN chmod a+x /run.sh
 
+ENV PYTHONPATH=/app     PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1
+
 CMD [ "/run.sh" ]
