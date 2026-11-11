@@ -65,3 +65,19 @@ ASGARD NotifyHub exposes an internal REST API for automations and scripts:
 
 - **Discovered Actions Empty:** Ensure Home Assistant Core API is accessible and `homeassistant_api: true` is enabled. Click **Sync Services** in the top right of the dashboard.
 - **Quiet Hours Timezone:** Verify your timezone string is in valid IANA format (e.g. `Europe/Amsterdam`).
+
+
+## Ingress troubleshooting (v0.1.1 and later)
+
+If the dashboard loads but every panel displays HTTP 404 (including Recipients,
+Audit History, and Service Discovery), update to NotifyHub **0.1.1 or newer**.
+NotifyHub 0.1.0 used root-absolute `/api/...` frontend URLs that bypassed the
+Home Assistant Ingress session path and called Home Assistant instead.
+
+After updating the App in Home Assistant, restart it and reload the sidebar page.
+The backend should receive API requests under the active Ingress prefix.
+
+If the API panels load but no services are found, first verify that
+`homeassistant_api: true` is present in the installed App permissions and that
+Home Assistant Core exposes available `notify` or `persistent_notification`
+actions. Check the App logs for Core API errors; do not share credentials.
