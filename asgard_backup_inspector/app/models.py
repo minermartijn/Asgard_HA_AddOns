@@ -30,6 +30,28 @@ class Freshness(str, Enum):
     UNKNOWN = "unknown"        # no usable data (error, or no parsable dates)
 
 
+class LocationCategory(str, Enum):
+    LOCAL = "local"
+    GOOGLE_DRIVE = "google_drive"
+    BOTH = "both"
+    PENDING = "pending"
+    UNKNOWN = "unknown"
+
+
+class OffsiteCoverage(str, Enum):
+    CONFIRMED = "confirmed"      # all local backups (or latest) verified offsite
+    INCOMPLETE = "incomplete"    # some backups missing from cloud
+    NONE = "none"                # no offsite copies detected
+    UNKNOWN = "unknown"          # cloud sensor disabled or unavailable
+
+
+class FullBackupCoverage(str, Enum):
+    PRESENT = "present"          # fresh full backup exists
+    STALE = "stale"              # full backup exists but is older than threshold
+    NOT_DETECTED = "not_detected" # only partial backups or none found
+    UNKNOWN = "unknown"
+
+
 class BackupSummary(BaseModel):
     id: str
     name: Optional[str] = None
@@ -41,6 +63,37 @@ class BackupSummary(BaseModel):
     protected: Optional[bool] = None
     compressed: Optional[bool] = None
     metadata_source: str = "supervisor"
+    location_category: str = "local"  # "local", "google_drive", "both", "pending", "unknown"
+    sync_state: Optional[str] = None  # e.g. "Backed Up", "Drive Only", "HA Only", "Pending"
+    remote_size_bytes: Optional[int] = None
+
+
+class GoogleDriveBackupItem(BaseModel):
+    slug: str
+    name: Optional[str] = None
+    date_utc: Optional[datetime] = None
+    state: str = "Backed Up"
+    size_bytes: Optional[int] = None
+    size_str: Optional[str] = None
+    backup_type: Optional[str] = None
+    protected: Optional[bool] = None
+
+
+class GoogleDriveSummary(BaseModel):
+    enabled: bool = True
+    available: bool = False
+    sensor_entity_id: str = "sensor.backup_state"
+    state: Optional[str] = None
+    backups_in_google_drive: int = 0
+    backups_in_home_assistant: int = 0
+    size_in_google_drive: Optional[str] = None
+    size_in_home_assistant: Optional[str] = None
+    free_space_in_google_drive: Optional[str] = None
+    last_backup_utc: Optional[datetime] = None
+    last_uploaded_utc: Optional[datetime] = None
+    freshness: Freshness = Freshness.UNKNOWN
+    error_message: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class HealthSummary(BaseModel):
@@ -62,3 +115,15 @@ class HealthSummary(BaseModel):
     showing_cached_data: bool = False
     demo_mode: bool = False
     error_message: Optional[str] = None
+
+    # Multi-location & Redundancy metrics
+    local_count: int = 0
+    remote_count: int = 0
+    both_count: int = 0
+    pending_count: int = 0
+    local_only_count: int = 0
+    remote_only_count: int = 0
+    cloud_freshness: Freshness = Freshness.UNKNOWN
+    offsite_coverage: str = "unknown"
+    full_backup_coverage: str = "unknown"
+    google_drive: Optional[GoogleDriveSummary] = None

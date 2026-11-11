@@ -181,9 +181,89 @@ function renderSummary(s) {
     safeSetText('count', String(s.total_count ?? 0));
     const fullCount = s.full_backup_count ?? 0;
     const partialCount = s.partial_backup_count ?? 0;
-    safeSetText('count-breakdown', `${fullCount} full · ${partialCount} partial`);
+    if (typeof s.local_count === 'number' && typeof s.remote_count === 'number' && s.remote_count > 0) {
+      safeSetText('count-breakdown', `${fullCount} full · ${partialCount} partial (${s.local_count} local · ${s.remote_count} in Drive)`);
+    } else {
+      safeSetText('count-breakdown', `${fullCount} full · ${partialCount} partial`);
+    }
   } catch (err) {
     console.error('Error rendering count card:', err);
+  }
+
+  // Google Drive Card & Redundancy Indicators
+  try {
+    const gd = s.google_drive;
+    const gBadge = $('gdrive-badge');
+    if (gd) {
+      if (gd.available) {
+        if (gBadge) {
+          gBadge.textContent = (gd.state || 'CONNECTED').toUpperCase();
+          gBadge.className = 'status-badge status-fresh';
+        }
+        safeSetText('gdrive-count', `${gd.backups_in_google_drive} in Drive · ${gd.backups_in_home_assistant} in HA`);
+        const upStr = gd.last_uploaded_utc ? formatDate(gd.last_uploaded_utc) : 'Never';
+        const storageStr = gd.size_in_google_drive ? ` · Storage: ${gd.size_in_google_drive}` : '';
+        const freeStr = gd.free_space_in_google_drive ? ` (${gd.free_space_in_google_drive} free)` : '';
+        safeSetText('gdrive-hint', `Last upload: ${upStr}${storageStr}${freeStr}`);
+      } else if (gd.enabled === false) {
+        if (gBadge) {
+          gBadge.textContent = 'DISABLED';
+          gBadge.className = 'status-badge status-unknown';
+        }
+        safeSetText('gdrive-count', 'Disabled');
+        safeSetText('gdrive-hint', 'Google Drive integration disabled in App options.');
+      } else {
+        if (gBadge) {
+          gBadge.textContent = (gd.state || 'UNAVAILABLE').toUpperCase();
+          gBadge.className = 'status-badge status-unavailable';
+        }
+        safeSetText('gdrive-count', 'Unavailable');
+        safeSetText('gdrive-hint', gd.error_message || 'Could not communicate with Google Drive sensor.');
+      }
+    } else {
+      if (gBadge) {
+        gBadge.textContent = 'NOT CONFIGURED';
+        gBadge.className = 'status-badge status-unknown';
+      }
+      safeSetText('gdrive-count', '–');
+      safeSetText('gdrive-hint', 'Google Drive sensor not configured.');
+    }
+
+    // Redundancy Matrix Indicators
+    const indLocal = $('ind-local-freshness');
+    const indCloud = $('ind-cloud-freshness');
+    const indOffsite = $('ind-offsite-coverage');
+    const indFull = $('ind-full-coverage');
+
+    if (indLocal) {
+      const lFresh = s.freshness || 'unknown';
+      indLocal.textContent = lFresh.toUpperCase();
+      indLocal.className = `status-badge ${lFresh === 'fresh' ? 'status-fresh' : lFresh === 'stale' ? 'status-stale' : 'status-unknown'}`;
+      safeSetText('hint-local-freshness', lFresh === 'fresh' ? 'Recent backup present locally' : lFresh === 'stale' ? 'Local backup older than threshold' : 'No local backup date');
+    }
+
+    if (indCloud) {
+      const cFresh = s.cloud_freshness || 'unknown';
+      indCloud.textContent = cFresh.toUpperCase();
+      indCloud.className = `status-badge ${cFresh === 'fresh' ? 'status-fresh' : cFresh === 'stale' ? 'status-stale' : 'status-unknown'}`;
+      safeSetText('hint-cloud-freshness', cFresh === 'fresh' ? 'Recent upload to Google Drive' : cFresh === 'stale' ? 'Cloud backup older than threshold' : 'Cloud sync not detected');
+    }
+
+    if (indOffsite) {
+      const offCov = (s.offsite_coverage || 'unknown').toLowerCase();
+      indOffsite.textContent = offCov.toUpperCase();
+      indOffsite.className = `status-badge ${offCov === 'confirmed' ? 'status-confirmed' : offCov === 'incomplete' ? 'status-incomplete' : 'status-unknown'}`;
+      safeSetText('hint-offsite-coverage', offCov === 'confirmed' ? 'All local backups replicated to Drive' : offCov === 'incomplete' ? 'Some backups local only' : 'Off-site status unverified');
+    }
+
+    if (indFull) {
+      const fCov = (s.full_backup_coverage || 'unknown').toLowerCase();
+      indFull.textContent = fCov.replace('_', ' ').toUpperCase();
+      indFull.className = `status-badge ${fCov === 'present' ? 'status-present' : fCov === 'stale' ? 'status-stale' : 'status-not_detected'}`;
+      safeSetText('hint-full-coverage', fCov === 'present' ? 'Recent full backup available' : fCov === 'stale' ? 'Full backup is older than threshold' : 'No full backup detected');
+    }
+  } catch (err) {
+    console.error('Error rendering redundancy indicators:', err);
   }
 
   // Newest Backup Card
@@ -250,6 +330,18 @@ function renderSummary(s) {
   // Diagnostics Panel Values
   try {
     safeSetText('diag-api', s.api_status ? s.api_status.toUpperCase() : 'UNKNOWN');
+    if (s.google_drive) {
+      if (s.google_drive.available) {
+        safeSetText('diag-gdrive', `Connected (${s.google_drive.state})`);
+      } else if (s.google_drive.enabled === false) {
+        safeSetText('diag-gdrive', 'Disabled');
+      } else {
+        safeSetText('diag-gdrive', s.google_drive.state ? `Unavailable (${s.google_drive.state})` : 'Unavailable');
+      }
+      safeSetText('diag-sensor', s.google_drive.sensor_entity_id || 'sensor.backup_state');
+    } else {
+      safeSetText('diag-gdrive', 'Not configured');
+    }
     safeSetText('diag-threshold', `${s.stale_threshold_hours || 48} hours`);
     safeSetText('diag-supervisor-stale', s.supervisor_days_until_stale ? `${s.supervisor_days_until_stale} days` : 'Not configured');
     safeSetText('diag-last-success', s.last_success_utc ? formatDate(s.last_success_utc) : 'Never');
@@ -307,22 +399,29 @@ function renderVisualizations(backups, summary) {
     const locsContainer = $('storage-locations');
     if (locsContainer) {
       locsContainer.replaceChildren();
-      Object.entries(locationsMap).forEach(([loc, count]) => {
-        const span = document.createElement('span');
-        span.className = 'loc-badge';
-        span.textContent = `${loc} (${count})`;
-        locsContainer.appendChild(span);
+      const locBreakdown = {
+        'Both (Local + Drive)': 0,
+        'Local Only': 0,
+        'Drive Only': 0,
+        'Pending Upload': 0,
+      };
+      backups.forEach((b) => {
+        if (b.location_category === 'both') locBreakdown['Both (Local + Drive)']++;
+        else if (b.location_category === 'google_drive') locBreakdown['Drive Only']++;
+        else if (b.location_category === 'pending') locBreakdown['Pending Upload']++;
+        else locBreakdown['Local Only']++;
       });
-    }
-
-    // Populate Location Filter Dropdown if needed
-    const filterLocEl = $('filter-location');
-    if (filterLocEl && filterLocEl.options.length <= 1) {
-      Object.keys(locationsMap).sort().forEach((loc) => {
-        const opt = document.createElement('option');
-        opt.value = loc;
-        opt.textContent = `Location: ${loc}`;
-        filterLocEl.appendChild(opt);
+      Object.entries(locBreakdown).forEach(([label, count]) => {
+        if (count > 0) {
+          const span = document.createElement('span');
+          span.className = 'loc-badge';
+          if (label.includes('Both')) span.className += ' loc-both';
+          else if (label.includes('Drive')) span.className += ' loc-cloud';
+          else if (label.includes('Pending')) span.className += ' loc-pending';
+          else span.className += ' loc-local';
+          span.textContent = `${label}: ${count}`;
+          locsContainer.appendChild(span);
+        }
       });
     }
   } catch (err) {
@@ -470,12 +569,22 @@ function getFilteredAndSortedBackups() {
 
   // Location filter
   if (filterLocation !== 'all') {
-    list = list.filter((b) => {
-      if (b.locations && b.locations.length) {
-        return b.locations.includes(filterLocation);
-      }
-      return (b.location || '.local') === filterLocation;
-    });
+    if (filterLocation === 'both') {
+      list = list.filter((b) => b.location_category === 'both' || (b.locations && b.locations.length > 1 && b.locations.includes('Google Drive')));
+    } else if (filterLocation === 'local') {
+      list = list.filter((b) => b.location_category === 'local');
+    } else if (filterLocation === 'google_drive') {
+      list = list.filter((b) => b.location_category === 'google_drive');
+    } else if (filterLocation === 'pending') {
+      list = list.filter((b) => b.location_category === 'pending' || (b.sync_state || '').toLowerCase().includes('pending'));
+    } else {
+      list = list.filter((b) => {
+        if (b.locations && b.locations.length) {
+          return b.locations.includes(filterLocation);
+        }
+        return (b.location || '.local') === filterLocation;
+      });
+    }
   }
 
   // Protection filter
@@ -641,13 +750,33 @@ function renderTable() {
 
       // 7. Locations
       const tdLoc = document.createElement('td');
-      const locList = b.locations && b.locations.length ? b.locations : [b.location || '.local'];
-      locList.forEach((l) => {
-        const lSpan = document.createElement('span');
-        lSpan.className = 'loc-badge';
-        lSpan.textContent = l || '.local';
-        tdLoc.appendChild(lSpan);
-      });
+      const cat = b.location_category || 'local';
+      const locSpan = document.createElement('span');
+      if (cat === 'both') {
+        locSpan.className = 'loc-badge loc-both';
+        locSpan.innerHTML = '&#9729; Local + Drive';
+        locSpan.title = 'Present locally and confirmed in Google Drive';
+      } else if (cat === 'google_drive') {
+        locSpan.className = 'loc-badge loc-cloud';
+        locSpan.innerHTML = '&#9729; Drive Only';
+        locSpan.title = 'Stored in Google Drive (not stored locally)';
+      } else if (cat === 'pending') {
+        locSpan.className = 'loc-badge loc-pending';
+        locSpan.innerHTML = '&#8987; Pending Upload';
+        locSpan.title = 'Stored locally, queued/pending upload to Google Drive';
+      } else {
+        locSpan.className = 'loc-badge loc-local';
+        locSpan.innerHTML = '&#128421; Local';
+        locSpan.title = 'Stored locally in Home Assistant';
+      }
+      tdLoc.appendChild(locSpan);
+
+      if (b.sync_state && b.sync_state !== 'Backed Up' && b.sync_state !== 'Drive Only' && b.sync_state !== 'Local Only') {
+        const syncTag = document.createElement('span');
+        syncTag.className = 'sync-state-tag';
+        syncTag.textContent = b.sync_state;
+        tdLoc.appendChild(syncTag);
+      }
       tr.appendChild(tdLoc);
 
       rowsEl.appendChild(tr);

@@ -15,9 +15,9 @@
       <div class="brand-text">
         <div class="title-row">
           <h1>Backup Inspector</h1>
-          <span class="version-tag">v0.2.0</span>
+          <span class="version-tag">v0.3.0</span>
         </div>
-        <p class="subtitle">Read-only view of Home Assistant backup metadata</p>
+        <p class="subtitle">Read-only view of Home Assistant and Google Drive backup metadata</p>
       </div>
     </div>
     <div class="top-actions">
@@ -55,6 +55,14 @@
           <span class="diag-value" id="diag-api">Checking…</span>
         </div>
         <div class="diag-item">
+          <span class="diag-label">Google Drive Integration</span>
+          <span class="diag-value" id="diag-gdrive">Checking…</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Google Drive Sensor</span>
+          <span class="diag-value" id="diag-sensor">sensor.backup_state</span>
+        </div>
+        <div class="diag-item">
           <span class="diag-label">Freshness Threshold</span>
           <span class="diag-value" id="diag-threshold">48 hours</span>
         </div>
@@ -69,6 +77,36 @@
         <div class="diag-item">
           <span class="diag-label">Cache Policy</span>
           <span class="diag-value">5 min cache · 10s refresh rate limit</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Redundancy & Multi-Location Indicators Section -->
+    <section class="panel redundancy-panel" id="redundancy-section">
+      <div class="panel-header">
+        <h2>Backup Redundancy & Coverage Status</h2>
+        <span class="panel-tag">Multi-Location</span>
+      </div>
+      <div class="redundancy-grid">
+        <div class="redundancy-card">
+          <span class="redundancy-label">Local Freshness</span>
+          <span id="ind-local-freshness" class="status-badge status-unknown">Checking…</span>
+          <p class="redundancy-hint" id="hint-local-freshness">Local backup recency</p>
+        </div>
+        <div class="redundancy-card">
+          <span class="redundancy-label">Cloud Freshness</span>
+          <span id="ind-cloud-freshness" class="status-badge status-unknown">Checking…</span>
+          <p class="redundancy-hint" id="hint-cloud-freshness">Google Drive recency</p>
+        </div>
+        <div class="redundancy-card">
+          <span class="redundancy-label">Off-Site Coverage</span>
+          <span id="ind-offsite-coverage" class="status-badge status-unknown">Checking…</span>
+          <p class="redundancy-hint" id="hint-offsite-coverage">Local vs cloud copies</p>
+        </div>
+        <div class="redundancy-card">
+          <span class="redundancy-label">Full-Backup Coverage</span>
+          <span id="ind-full-coverage" class="status-badge status-unknown">Checking…</span>
+          <p class="redundancy-hint" id="hint-full-coverage">Recent full backup detected</p>
         </div>
       </div>
     </section>
@@ -94,18 +132,27 @@
 
       <article class="card">
         <div class="card-head">
-          <h2>Most Recent Backup</h2>
-        </div>
-        <p class="value" id="newest">–</p>
-        <p class="hint" id="newest-date"></p>
-      </article>
-
-      <article class="card">
-        <div class="card-head">
           <h2>Known Total Storage</h2>
         </div>
         <p class="value" id="storage">–</p>
         <p class="hint" id="storage-hint"></p>
+      </article>
+
+      <article class="card card-cloud" id="card-google-drive">
+        <div class="card-head">
+          <h2>Google Drive Backup</h2>
+          <span id="gdrive-badge" class="status-badge status-unknown">Checking…</span>
+        </div>
+        <p class="value" id="gdrive-count">–</p>
+        <p class="hint" id="gdrive-hint">Checking Google Drive sensor…</p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Most Recent Backup</h2>
+        </div>
+        <p class="value" id="newest">–</p>
+        <p class="hint" id="newest-date"></p>
       </article>
     </section>
 
@@ -186,6 +233,10 @@
             </select>
             <select id="filter-location" aria-label="Filter by storage location">
               <option value="all">All Locations</option>
+              <option value="both">Both (Local + Drive)</option>
+              <option value="local">Local Only</option>
+              <option value="google_drive">Google Drive Only</option>
+              <option value="pending">Upload Pending</option>
             </select>
             <select id="filter-protection" aria-label="Filter by password protection">
               <option value="all">All Protection</option>

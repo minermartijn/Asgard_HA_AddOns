@@ -13,6 +13,11 @@ from fastapi.staticfiles import StaticFiles
 from . import __version__
 from .history import HistoryStore
 from .models import BackupSummary, HealthSummary
+from .providers import (
+    CloudBackupProvider,
+    DemoGoogleDriveProvider,
+    GoogleDriveBackupProvider,
+)
 from .service import InspectorService
 from .settings import Settings, load_settings
 from .sources import BackupSource, DemoBackupSource, SupervisorBackupSource
@@ -41,11 +46,29 @@ def build_source(settings: Settings) -> BackupSource:
     return SupervisorBackupSource(token=settings.supervisor_token, base_url=settings.supervisor_url)
 
 
-def create_app(settings: Optional[Settings] = None, source: Optional[BackupSource] = None) -> FastAPI:
+def build_cloud_provider(settings: Settings) -> Optional[CloudBackupProvider]:
+    if not settings.enable_google_drive:
+        return None
+    if settings.demo_mode:
+        return DemoGoogleDriveProvider(enabled=True, sensor_entity_id=settings.google_drive_sensor)
+    return GoogleDriveBackupProvider(
+        token=settings.supervisor_token,
+        core_api_url=settings.core_api_url,
+        sensor_entity_id=settings.google_drive_sensor,
+        enabled=settings.enable_google_drive,
+    )
+
+
+def create_app(
+    settings: Optional[Settings] = None,
+    source: Optional[BackupSource] = None,
+    cloud_provider: Optional[CloudBackupProvider] = None,
+) -> FastAPI:
     settings = settings or load_settings()
     history_store = HistoryStore(settings.data_dir)
     service = InspectorService(
         source=source or build_source(settings),
+        cloud_provider=cloud_provider if cloud_provider is not None else build_cloud_provider(settings),
         stale_threshold_hours=settings.stale_threshold_hours,
         cache_ttl_seconds=settings.cache_ttl_seconds,
         min_refresh_interval_seconds=settings.min_refresh_interval_seconds,

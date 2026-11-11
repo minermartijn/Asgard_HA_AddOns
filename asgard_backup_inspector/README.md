@@ -1,15 +1,18 @@
 # ASGARD Backup Inspector
 
-> **Version: 0.2.0.** Read-only dashboard for Home Assistant backup metadata. Read [Limitations](#limitations) before relying on it.
+> **Version: 0.3.0.** Read-only dashboard for Home Assistant and Google Drive backup metadata. Read [Limitations](#limitations) before relying on it.
 
-A read-only dashboard, opened from the Home Assistant sidebar, that answers one question: **is a recent backup listed?**
+A read-only dashboard, opened from the Home Assistant sidebar, that answers critical backup questions: **is a recent backup listed, and is an off-site copy confirmed?**
 
 It shows:
 
-- **Backup Freshness & Health:** Instant status verification against a configurable staleness threshold (48 hours by default);
-- **Backup Counts & Breakdown:** Total backups discovered, split into full and partial archives;
-- **Storage Breakdown:** Total known backup storage, split by backup type and storage locations (e.g. `.local`, network mounts);
-- **Chronological Timeline:** Visual timeline of recent backups showing age and type relative to the freshness threshold;
+- **Backup Freshness & Redundancy Matrix:** Independent evaluations for Local Freshness, Cloud Freshness, Off-Site Coverage, and Full-Backup Coverage;
+- **Multi-Location Backup Discovery:** Discovers and merges local Supervisor backups and cloud backups managed by the popular Home Assistant Google Drive Backup add-on;
+- **Google Drive Status Overview:** Real-time sync status, cloud storage usage, available Google Drive free space, and last successful upload timestamp;
+- **Deduplicated Inventory:** Accurately deduplicates archives present in both locations to display true unique counts and sizes without double-counting;
+- **Location Filtering:** Filter table records by *All Locations*, *Both (Local + Drive)*, *Local Only*, *Google Drive Only*, or *Pending Upload*;
+- **Storage Breakdown:** Total known backup storage, split by backup type and storage locations;
+- **Chronological Timeline:** Visual timeline of recent backups showing age, location, and type relative to the freshness threshold;
 - **Searchable Table:** Live keyword search, type/location/protection filters, sortable columns, and pagination;
 - **Storage History Trend:** Safe, persistent local snapshot measurements under `/data/history.json`.
 
@@ -27,7 +30,7 @@ A green status means **a recent backup appears in the metadata**. It does **not*
 | `panel_admin` | `true` | Only administrators see it in the sidebar. |
 | `hassio_api` | `true` | Needed to call `GET /backups/info` on the Supervisor. |
 | `hassio_role` | `default` | The Supervisor's `default` role allows read-only paths ending in `/info`. The broader `backup` role (create/restore/delete) is **not** requested. |
-| `homeassistant_api` | not set | The App does not use the Home Assistant Core API. |
+| `homeassistant_api` | `true` | Used exclusively to query the Google Drive Backup sensor state (`GET /core/api/states/sensor.backup_state`). No write or management endpoints are ever called. |
 
 The web server also refuses connections that don't come from the Supervisor's Ingress proxy.
 
