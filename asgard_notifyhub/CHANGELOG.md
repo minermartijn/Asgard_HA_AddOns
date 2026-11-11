@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 - 2026-11-11
+
+### Fixed
+- **Modal Select Dropdown Auto-Close Bug**: Resolved issue where selecting options in dropdowns (e.g. Route Target Action, Minimum Priority) inside `#app-modal` prematurely closed the dialog. Replaced coordinate bounding box checks with explicit backdrop overlay target detection (`e.target === el.appModal && !e.target.closest('.modal-content')`), keeping all modals open during dropdown selection.
+- **Home Assistant Modern Notify Entity Dispatch (HTTP 400)**: Resolved `Home Assistant rejected call with HTTP 400: 400: Bad Request` when dispatching to modern notification entities like `notify.mart_s25`. NotifyHub now automatically routes entity targets through `notify.send_message` with `entity_id` (and includes automatic bidirectional fallback for legacy services), ensuring smooth delivery to all modern mobile app and companion device entities.
+- **Cache-Busting Assets**: Bumped asset cache-busting queries to `?v=0.1.4`.
+
+
 ## 0.1.3 - 2026-11-11
 
 ### Fixed

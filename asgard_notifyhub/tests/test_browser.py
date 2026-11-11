@@ -285,3 +285,51 @@ def test_ingress_without_trailing_slash_loads_and_resolves(browser_instance, ing
     assert len(escaped_requests) == 0, f"Requests escaped Ingress prefix: {escaped_requests}"
 
     page.close()
+
+
+def test_modal_dropdown_interactions_and_backdrop_close(browser_instance, ingress_server):
+    """Verify that clicking dropdowns/select elements in modals never prematurely closes the dialog."""
+    page = browser_instance.new_page()
+    ingress_url = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}/"
+    page.goto(ingress_url)
+    page.wait_for_selector(".nav-tabs")
+
+    # Navigate to Recipients & Routes
+    page.click('button[data-tab="tab-recipients"]')
+    page.wait_for_selector("#btn-add-recipient")
+
+    # Open Add Recipient modal
+    page.click("#btn-add-recipient")
+    page.wait_for_selector("#modal-rec-form")
+    assert page.is_visible("#app-modal")
+
+    # Click on the input inside the modal - modal must stay open
+    page.click("#rec-name")
+    assert page.is_visible("#app-modal")
+
+    # Close modal via close button
+    page.click("#modal-close-btn")
+    page.wait_for_function('() => !document.getElementById("app-modal").hasAttribute("open")')
+
+    # If recipients exist, open Add Route modal and click select dropdowns
+    cards = page.query_selector_all(".recipient-card")
+    if cards:
+        route_btn = cards[0].query_selector(".routes-header button")
+        if route_btn:
+            route_btn.click()
+            page.wait_for_selector("#route-service")
+            assert page.is_visible("#app-modal")
+
+            # Click the select dropdown - modal must NOT close!
+            page.click("#route-service")
+            assert page.is_visible("#app-modal")
+
+            page.click("#route-min-priority")
+            assert page.is_visible("#app-modal")
+
+            # Click the backdrop directly (e.target === el.appModal)
+            page.evaluate("() => document.getElementById('app-modal').dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}))")
+            page.wait_for_function('() => !document.getElementById("app-modal").hasAttribute("open")')
+
+    page.close()
+

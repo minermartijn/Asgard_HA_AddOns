@@ -1,6 +1,6 @@
 # ASGARD NotifyHub
 
-> **Version: 0.1.3.** Centralized notification policy, quiet hours, recipient routing, and delivery auditing for Home Assistant.
+> **Version: 0.1.4.** Centralized notification policy, quiet hours, recipient routing, and delivery auditing for Home Assistant.
 
 ASGARD NotifyHub provides a centralized, privacy-respecting notification routing and policy management hub accessed directly through Home Assistant Ingress.
 
