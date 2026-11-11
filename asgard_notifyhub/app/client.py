@@ -19,6 +19,8 @@ ALLOWED_DOMAINS = {"notify", "persistent_notification"}
 
 
 class HomeAssistantClient(Protocol):
+    last_error: Optional[str]
+
     async def discover_services(self) -> list[TargetService]:
         ...
 
@@ -45,6 +47,7 @@ class RestHomeAssistantClient:
         self.token = token
         self.timeout_seconds = timeout_seconds
         self.transport = transport
+        self.last_error: Optional[str] = None
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -54,11 +57,14 @@ class RestHomeAssistantClient:
 
     async def discover_services(self) -> list[TargetService]:
         """Discover available notification services from Home Assistant Core API."""
+        self.last_error = None
         if not self.token:
-            logger.warning("No Supervisor token configured; cannot discover services from Core API.")
+            self.last_error = "Supervisor token not available. Ensure add-on has homeassistant_api enabled."
+            logger.warning(self.last_error)
             return []
 
         url = f"{self.core_api_url}/services"
+        data = None
         try:
             async with httpx.AsyncClient(
                 timeout=self.timeout_seconds,
@@ -66,16 +72,31 @@ class RestHomeAssistantClient:
                 follow_redirects=False,
             ) as client:
                 res = await client.get(url, headers=self._headers())
-                if res.status_code != 200:
-                    logger.warning("Core API /services returned HTTP %s", res.status_code)
+                if res.status_code == 401:
+                    self.last_error = "Home Assistant Core API returned 401 Unauthorized. Invalid Supervisor token."
+                    logger.warning(self.last_error)
+                    return []
+                elif res.status_code == 403:
+                    self.last_error = "Home Assistant Core API returned 403 Forbidden. Check add-on permissions."
+                    logger.warning(self.last_error)
+                    return []
+                elif res.status_code != 200:
+                    self.last_error = f"Home Assistant Core API returned HTTP {res.status_code}."
+                    logger.warning(self.last_error)
                     return []
                 data = res.json()
+        except httpx.TimeoutException:
+            self.last_error = f"Connection to Home Assistant Core API timed out ({self.timeout_seconds}s)."
+            logger.error(self.last_error)
+            return []
         except Exception as exc:
-            logger.error("Failed to query Home Assistant /services: %s", exc)
+            self.last_error = f"Failed to query Home Assistant /services: {exc}"
+            logger.error(self.last_error)
             return []
 
         services: list[TargetService] = []
         if not isinstance(data, list):
+            self.last_error = "Unexpected response structure from Home Assistant /services."
             return []
 
         for item in data:
@@ -103,6 +124,42 @@ class RestHomeAssistantClient:
                             supported=True,
                         )
                     )
+
+        # Also discover modern notify.* entities via /states if available
+        try:
+            async with httpx.AsyncClient(
+                timeout=self.timeout_seconds,
+                transport=self.transport,
+                follow_redirects=False,
+            ) as client:
+                res_states = await client.get(f"{self.core_api_url}/states", headers=self._headers())
+                if res_states.status_code == 200:
+                    states_data = res_states.json()
+                    if isinstance(states_data, list):
+                        for entity in states_data:
+                            if not isinstance(entity, dict):
+                                continue
+                            eid = str(entity.get("entity_id", "")).strip().lower()
+                            if eid.startswith("notify."):
+                                entity_svc_name = eid.split(".", 1)[1]
+                                if not any(s.ha_domain == "notify" and s.ha_service == entity_svc_name for s in services):
+                                    attrs = entity.get("attributes", {}) if isinstance(entity.get("attributes"), dict) else {}
+                                    friendly = attrs.get("friendly_name") or eid
+                                    services.append(
+                                        TargetService(
+                                            ha_domain="notify",
+                                            ha_service=entity_svc_name,
+                                            display_name=f"{friendly} ({eid})",
+                                            description=f"Notification entity: {eid}",
+                                            target_type="entity",
+                                            supported=True,
+                                        )
+                                    )
+        except Exception as exc:
+            logger.debug("Optional notify entity discovery skipped: %s", exc)
+
+        if not services and not self.last_error:
+            self.last_error = "No compatible notification actions found in Home Assistant."
 
         # Sort: notify first, then alphabetically
         services.sort(key=lambda s: (0 if s.ha_domain == "notify" else 1, s.display_name.lower()))
@@ -161,8 +218,11 @@ class DemoHomeAssistantClient:
 
     def __init__(self):
         self.dispatched_calls: list[dict[str, Any]] = []
+        self.last_error: Optional[str] = None
+        self.token = "demo_token"
 
     async def discover_services(self) -> list[TargetService]:
+        self.last_error = None
         return [
             TargetService(
                 ha_domain="notify",
@@ -174,7 +234,7 @@ class DemoHomeAssistantClient:
             ),
             TargetService(
                 ha_domain="notify",
-                ha_service="mobile_app_martijn_phone",
+                ha_service="mobile_app_pixel",
                 display_name="Martijn's Pixel 8 Pro",
                 description="Home Assistant Companion App for Android",
                 target_type="service",

@@ -39,7 +39,7 @@ def create_app(
 
     if service is None:
         storage = Storage(cfg.db_path)
-        if cfg.demo_mode or not cfg.supervisor_token:
+        if cfg.demo_mode:
             client = DemoHomeAssistantClient()
         else:
             client = RestHomeAssistantClient(core_api_url=cfg.core_api_url, token=cfg.supervisor_token)
@@ -48,8 +48,12 @@ def create_app(
         svc = service
 
     allowed_networks = []
+    allow_all = False
     for item in (cfg.allowed_source_ips or "").split(","):
         cleaned = item.strip()
+        if cleaned == "*":
+            allow_all = True
+            break
         if cleaned:
             try:
                 allowed_networks.append(ipaddress.ip_network(cleaned, strict=False))
@@ -69,14 +73,14 @@ def create_app(
     # ---- Security & Ingress Middleware ----
     @app.middleware("http")
     async def security_and_ingress_guard(request: Request, call_next):
-        client_host = request.client.host if request.client else None
-        if allowed_networks and client_host:
+        if not allow_all:
+            client_host = request.client.host if request.client else None
+            if not client_host:
+                return JSONResponse(status_code=403, content={"detail": "Forbidden: missing client IP"})
             try:
                 c_ip = ipaddress.ip_address(client_host)
                 if not any(c_ip in net for net in allowed_networks):
-                    # Also permit requests if valid Ingress header is present and proxy matches
-                    if not request.headers.get("X-Ingress-Path"):
-                        return JSONResponse(status_code=403, content={"detail": "Forbidden: untrusted source IP"})
+                    return JSONResponse(status_code=403, content={"detail": "Forbidden: untrusted source IP"})
             except ValueError:
                 return JSONResponse(status_code=403, content={"detail": "Forbidden: invalid source IP"})
 

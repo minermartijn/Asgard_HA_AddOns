@@ -5,6 +5,20 @@
 (function () {
   'use strict';
 
+  // --- Centralized API URL Resolver for Home Assistant Ingress & Direct Access ---
+  function getApiUrl(endpoint) {
+    if (!endpoint) return '';
+    const clean = String(endpoint).replace(/^\/+/, '');
+    let dir = window.location.pathname || '/';
+    if (dir.endsWith('/index.html')) {
+      dir = dir.slice(0, -10);
+    }
+    if (!dir.endsWith('/')) {
+      dir += '/';
+    }
+    return `${dir}${clean}`;
+  }
+
   // --- State ---
   const state = {
     services: [],
@@ -122,34 +136,53 @@
 
   // --- API Client ---
   async function apiGet(endpoint) {
-    const res = await fetch(endpoint);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || `HTTP ${res.status}`);
+    const url = getApiUrl(endpoint);
+    try {
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      return res.json();
+    } catch (netErr) {
+      console.warn(`API GET failed for ${url}:`, netErr);
+      throw netErr;
     }
-    return res.json();
   }
 
   async function apiPost(endpoint, body) {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || `HTTP ${res.status}`);
+    const url = getApiUrl(endpoint);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      return res.json();
+    } catch (netErr) {
+      console.warn(`API POST failed for ${url}:`, netErr);
+      throw netErr;
     }
-    return res.json();
   }
 
   async function apiDelete(endpoint) {
-    const res = await fetch(endpoint, { method: 'DELETE' });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || `HTTP ${res.status}`);
+    const url = getApiUrl(endpoint);
+    try {
+      const res = await fetch(url, { method: 'DELETE', credentials: 'same-origin' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      return res.json();
+    } catch (netErr) {
+      console.warn(`API DELETE failed for ${url}:`, netErr);
+      throw netErr;
     }
-    return res.json();
   }
 
   // --- Tab Navigation ---
@@ -219,34 +252,48 @@
     if (!state.summary) return;
     const s = state.summary;
 
-    const haStatus = s.ha_connected ? (s.demo_mode ? 'Demo Mode' : 'Connected') : 'Offline / Token Missing';
-    const haClass = s.ha_connected ? 'status-ok' : 'status-danger';
+    let haStatus = 'Checking…';
+    let haClass = 'status-unknown';
+
+    if (s.demo_mode) {
+      haStatus = 'Demo Mode';
+      haClass = 'status-ok';
+    } else if (s.ha_connected) {
+      haStatus = 'Connected';
+      haClass = 'status-ok';
+    } else {
+      haStatus = s.ha_error ? `Disconnected (${s.ha_error})` : 'Offline / Token Missing';
+      haClass = 'status-danger';
+    }
 
     if (el.haStatusBadge) {
       el.haStatusBadge.textContent = haStatus;
       el.haStatusBadge.className = `status-badge ${haClass}`;
     }
     if (el.cardHaBadge) {
-      el.cardHaBadge.textContent = s.ha_connected ? 'OK' : 'FAIL';
+      el.cardHaBadge.textContent = s.ha_connected ? (s.demo_mode ? 'DEMO' : 'OK') : 'FAIL';
       el.cardHaBadge.className = `status-badge ${haClass}`;
     }
     if (el.statHaConn) el.statHaConn.textContent = haStatus;
-    if (el.statServicesCount) el.statServicesCount.textContent = `${s.services_discovered} notify actions discovered`;
-    if (el.statSubmissions) el.statSubmissions.textContent = String(s.submissions_24h);
-    if (el.statQuiet) el.statQuiet.textContent = String(s.quiet_silenced_24h);
-    if (el.statRecipients) el.statRecipients.textContent = String(s.recipients_count);
-    if (el.statRoutesHint) el.statRoutesHint.textContent = `${s.routes_count} active routes mapped`;
+    const svcCount = s.discovered_services_count ?? s.services_discovered ?? state.services.length;
+    if (el.statServicesCount) el.statServicesCount.textContent = `${svcCount} notify actions discovered`;
+    if (el.statSubmissions) el.statSubmissions.textContent = String(s.submissions_24h ?? 0);
+    const quietCount = s.blocked_quiet_hours_24h ?? s.quiet_silenced_24h ?? 0;
+    if (el.statQuiet) el.statQuiet.textContent = String(quietCount);
+    if (el.statRecipients) el.statRecipients.textContent = String(s.recipients_count ?? 0);
+    if (el.statRoutesHint) el.statRoutesHint.textContent = `${s.routes_count ?? 0} active routes mapped`;
     if (el.tagDiscoveredCount) el.tagDiscoveredCount.textContent = `${state.services.length} discovered`;
 
     // Render discovered services
     if (el.dashboardServicesList) {
       if (state.services.length === 0) {
-        el.dashboardServicesList.innerHTML = '<p class="hint">No Home Assistant notify services detected or connection pending.</p>';
+        const msg = s.ha_error || 'No Home Assistant notify services detected or connection pending.';
+        el.dashboardServicesList.innerHTML = `<p class="hint">${escapeHtml(msg)}</p>`;
       } else {
         el.dashboardServicesList.innerHTML = state.services.map((svc) => `
           <div class="service-chip">
-            <span class="chip-name">${escapeHtml(svc.full_name || svc.service)}</span>
-            <span class="chip-desc">${escapeHtml(svc.description || 'Notify Service')}</span>
+            <span class="chip-name">${escapeHtml(svc.display_name || svc.full_name || `${svc.ha_domain}.${svc.ha_service}`)}</span>
+            <span class="chip-desc">${escapeHtml(svc.description || (svc.target_type === 'entity' ? 'Notify Entity' : 'Notify Service'))}</span>
           </div>
         `).join('');
       }
@@ -290,7 +337,7 @@
       el.btnPreviewSend.addEventListener('click', async () => {
         try {
           const payload = getComposerPayload();
-          const res = await apiPost('/api/send/preview', payload);
+          const res = await apiPost('api/send/preview', payload);
           renderPreviewResults(res);
         } catch (err) {
           showBanner(`Preview error: ${err.message}`);
@@ -308,7 +355,7 @@
             showBanner('Please enter a notification message body.');
             return;
           }
-          const res = await apiPost('/api/send', payload);
+          const res = await apiPost('api/send', payload);
           showBanner(`Dispatched: ${res.records.length} routing submission(s) processed.`, 'success', 5000);
           el.compMessage.value = '';
           await refreshAllData();
@@ -367,7 +414,7 @@
       return `
         <div class="preview-item">
           <div class="preview-item-head">
-            <strong>${escapeHtml(item.recipient_name)}</strong> &rarr; <code>${escapeHtml(item.service_target)}</code>
+            <strong>${escapeHtml(item.recipient_name)}</strong> &rarr; <code>${escapeHtml(item.service_target || item.ha_service)}</code>
             <span class="status-badge ${badgeClass}">${statusText}</span>
           </div>
           <p class="preview-reason">${escapeHtml(item.reason || 'Normal dispatch')}</p>
@@ -388,17 +435,17 @@
 
     el.previewResultsContainer.innerHTML = records.map((r) => {
       let badgeClass = 'status-ok';
-      if (r.status === 'silenced') badgeClass = 'status-warning';
-      else if (r.status === 'skipped_dedup') badgeClass = 'status-warning';
+      if (r.status === 'silenced' || r.status === 'blocked_quiet_hours') badgeClass = 'status-warning';
+      else if (r.status === 'skipped_dedup' || r.status === 'suppressed_duplicate') badgeClass = 'status-warning';
       else if (r.status === 'failed') badgeClass = 'status-danger';
 
       return `
         <div class="preview-item">
           <div class="preview-item-head">
-            <strong>${escapeHtml(r.recipient_name || r.recipient_id)}</strong> &rarr; <code>${escapeHtml(r.ha_domain)}.${escapeHtml(r.ha_service)}</code>
+            <strong>${escapeHtml(r.recipient_name || r.recipient_id)}</strong> &rarr; <code>${escapeHtml(r.ha_domain ? `${r.ha_domain}.${r.ha_service}` : r.ha_service)}</code>
             <span class="status-badge ${badgeClass}">${escapeHtml(r.status)}</span>
           </div>
-          <p class="preview-reason">${escapeHtml(r.error_detail || (r.status === 'submitted' ? 'Submitted to Home Assistant action' : r.status))}</p>
+          <p class="preview-reason">${escapeHtml(r.details || (r.status === 'submitted' ? 'Submitted to Home Assistant action' : r.status))}</p>
         </div>
       `;
     }).join('');
@@ -546,7 +593,7 @@
   // --- Render Audit History ---
   async function loadHistory() {
     try {
-      const data = await apiGet('/api/history?limit=100');
+      const data = await apiGet('api/history?limit=100');
       state.history = data.history || [];
       renderHistory();
     } catch (err) {
@@ -564,18 +611,18 @@
 
     el.historyTbody.innerHTML = state.history.map((h) => {
       let badgeClass = 'status-ok';
-      if (h.status === 'silenced') badgeClass = 'status-warning';
-      else if (h.status === 'skipped_dedup') badgeClass = 'status-warning';
+      if (h.status === 'silenced' || h.status === 'blocked_quiet_hours') badgeClass = 'status-warning';
+      else if (h.status === 'skipped_dedup' || h.status === 'suppressed_duplicate') badgeClass = 'status-warning';
       else if (h.status === 'failed') badgeClass = 'status-danger';
 
       return `
         <tr>
-          <td>${escapeHtml(formatDate(h.created_at))}</td>
+          <td>${escapeHtml(formatDate(h.created_utc || h.created_at))}</td>
           <td><span class="status-badge status-secondary">${escapeHtml(h.priority)}</span></td>
           <td>${escapeHtml(h.recipient_name || h.recipient_id || '–')}</td>
-          <td><code>${escapeHtml(h.ha_domain)}.${escapeHtml(h.ha_service)}</code></td>
+          <td><code>${escapeHtml(h.ha_domain ? `${h.ha_domain}.${h.ha_service}` : h.ha_service)}</code></td>
           <td><span class="status-badge ${badgeClass}">${escapeHtml(h.status)}</span></td>
-          <td class="history-detail">${escapeHtml(h.error_detail || (h.status === 'submitted' ? 'Submitted to HA action' : '–'))}</td>
+          <td class="history-detail">${escapeHtml(h.details || (h.status === 'submitted' ? 'Submitted to HA action' : '–'))}</td>
         </tr>
       `;
     }).join('');
@@ -610,7 +657,7 @@
           const name = document.getElementById('rec-name').value.trim();
           const tz = document.getElementById('rec-tz').value.trim() || 'UTC';
           const enabled = document.getElementById('rec-enabled').checked;
-          await apiPost('/api/recipients', { name, timezone: tz, enabled });
+          await apiPost('api/recipients', { name, timezone: tz, enabled });
           closeModal();
           await refreshAllData();
           showBanner('Recipient created successfully.', 'success', 4000);
@@ -649,7 +696,7 @@
           const name = document.getElementById('rec-name').value.trim();
           const tz = document.getElementById('rec-tz').value.trim() || 'UTC';
           const enabled = document.getElementById('rec-enabled').checked;
-          await apiPost('/api/recipients', { id: recId, name, timezone: tz, enabled });
+          await apiPost('api/recipients', { id: recId, name, timezone: tz, enabled });
           closeModal();
           await refreshAllData();
           showBanner('Recipient updated successfully.', 'success', 4000);
@@ -662,7 +709,7 @@
     deleteRecipient: async (recId) => {
       if (!confirm('Are you sure you want to delete this recipient and all their routes?')) return;
       try {
-        await apiDelete(`/api/recipients/${recId}`);
+        await apiDelete(`api/recipients/${recId}`);
         await refreshAllData();
         showBanner('Recipient deleted.', 'success', 4000);
       } catch (err) {
@@ -674,8 +721,9 @@
     addRouteModal: (recId) => {
       const rec = state.recipients.find((r) => r.id === recId);
       const svcOptions = state.services.map((s) => {
-        const full = `${s.domain}.${s.service}`;
-        return `<option value="${escapeHtml(full)}">${escapeHtml(full)} (${escapeHtml(s.description || 'Notify')})</option>`;
+        const full = `${s.ha_domain}.${s.ha_service}`;
+        const label = s.display_name || full;
+        return `<option value="${escapeHtml(full)}">${escapeHtml(label)}</option>`;
       }).join('');
 
       const html = `
@@ -716,7 +764,7 @@
           const minPri = document.getElementById('route-min-priority').value;
           const enabled = document.getElementById('route-enabled').checked;
 
-          await apiPost('/api/routes', {
+          await apiPost('api/routes', {
             recipient_id: recId,
             name,
             ha_domain: haDomain,
@@ -736,7 +784,7 @@
     deleteRoute: async (routeId) => {
       if (!confirm('Are you sure you want to delete this route?')) return;
       try {
-        await apiDelete(`/api/routes/${routeId}`);
+        await apiDelete(`api/routes/${routeId}`);
         await refreshAllData();
         showBanner('Route deleted.', 'success', 4000);
       } catch (err) {
@@ -747,7 +795,7 @@
     testRoute: async (routeId) => {
       try {
         showBanner('Testing route dispatch to Home Assistant…', 'info', 3000);
-        const res = await apiPost(`/api/routes/${routeId}/test`, {});
+        const res = await apiPost(`api/routes/${routeId}/test`, {});
         if (res.success) {
           showBanner(`Route test SUCCESS: submitted to ${res.ha_service}`, 'success', 5000);
         } else {
@@ -795,7 +843,7 @@
           const desc = document.getElementById('grp-desc').value.trim();
           const checked = Array.from(document.querySelectorAll('input[name="grp-rec"]:checked')).map((c) => c.value);
 
-          await apiPost('/api/groups', {
+          await apiPost('api/groups', {
             name,
             description: desc,
             recipient_ids: checked,
@@ -851,7 +899,7 @@
           const desc = document.getElementById('grp-desc').value.trim();
           const checked = Array.from(document.querySelectorAll('input[name="grp-rec"]:checked')).map((c) => c.value);
 
-          await apiPost('/api/groups', {
+          await apiPost('api/groups', {
             id: groupId,
             name,
             description: desc,
@@ -869,7 +917,7 @@
     deleteGroup: async (groupId) => {
       if (!confirm('Are you sure you want to delete this group?')) return;
       try {
-        await apiDelete(`/api/groups/${groupId}`);
+        await apiDelete(`api/groups/${groupId}`);
         await refreshAllData();
         showBanner('Group deleted.', 'success', 4000);
       } catch (err) {
@@ -940,7 +988,7 @@
           const urgentOverride = document.getElementById('pol-urgent-override').checked;
           const enabled = document.getElementById('pol-enabled').checked;
 
-          await apiPost('/api/policies', {
+          await apiPost('api/policies', {
             target_id: targetId,
             target_type: targetType,
             quiet_start: quietStart,
@@ -961,7 +1009,7 @@
     deletePolicy: async (policyId) => {
       if (!confirm('Are you sure you want to delete this quiet hours policy?')) return;
       try {
-        await apiDelete(`/api/policies/${policyId}`);
+        await apiDelete(`api/policies/${policyId}`);
         await refreshAllData();
         showBanner('Policy deleted.', 'success', 4000);
       } catch (err) {
@@ -975,7 +1023,7 @@
     el.btnRefreshServices.addEventListener('click', async () => {
       try {
         showBanner('Syncing services from Home Assistant…', 'info', 2000);
-        const data = await apiGet('/api/services?refresh=true');
+        const data = await apiGet('api/services?refresh=true');
         state.services = data.services || [];
         await refreshAllData();
         showBanner('Services synchronized.', 'success', 3000);
@@ -994,7 +1042,7 @@
     el.btnPurgeHistory.addEventListener('click', async () => {
       if (!confirm('Purge delivery audit history older than 30 days?')) return;
       try {
-        const res = await apiPost('/api/history/purge?days=30', {});
+        const res = await apiPost('api/history/purge?days=30', {});
         showBanner(`Purged ${res.count} records.`, 'success', 4000);
         await loadHistory();
       } catch (err) {
@@ -1007,11 +1055,11 @@
   async function refreshAllData() {
     try {
       const [sum, svcs, recs, grps, pols] = await Promise.all([
-        apiGet('/api/summary'),
-        apiGet('/api/services'),
-        apiGet('/api/recipients'),
-        apiGet('/api/groups'),
-        apiGet('/api/policies'),
+        apiGet('api/summary'),
+        apiGet('api/services'),
+        apiGet('api/recipients'),
+        apiGet('api/groups'),
+        apiGet('api/policies'),
       ]);
 
       state.summary = sum;

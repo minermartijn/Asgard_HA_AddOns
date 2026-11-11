@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 DEFAULT_OPTIONS_PATH = Path("/data/options.json")
 DEFAULT_DATA_DIR = Path("/data")
-DEFAULT_SUPERVISOR_PROXY = "172.30.32.2"
+DEFAULT_SUPERVISOR_PROXY = "172.30.32.0/23,172.30.32.2,127.0.0.1"
 
 
 class Settings(BaseModel):

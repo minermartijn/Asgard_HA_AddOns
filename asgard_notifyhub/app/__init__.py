@@ -1,3 +1,3 @@
-"""ASGARD NotifyHub: notification routing, quiet hours and delivery auditing."""
+"""ASGARD NotifyHub Package."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

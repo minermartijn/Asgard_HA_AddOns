@@ -1,6 +1,8 @@
 """Tests for Home Assistant Core API client and domain security boundaries."""
 
 import asyncio
+import httpx
+import pytest
 from app.client import (
     ALLOWED_DOMAINS,
     DemoHomeAssistantClient,
@@ -23,6 +25,7 @@ def test_demo_client_operations():
     assert len(services) >= 3
     assert any(s.ha_domain == "notify" for s in services)
     assert any(s.ha_domain == "persistent_notification" for s in services)
+    assert client.last_error is None
 
     # Valid notify call
     ok, err = asyncio.run(
@@ -64,3 +67,90 @@ def test_rest_client_security_boundary():
     )
     assert ok is False
     assert "Security Violation" in (err or "")
+
+
+def test_rest_client_missing_token():
+    client = RestHomeAssistantClient(core_api_url="http://supervisor/core/api", token=None)
+    services = asyncio.run(client.discover_services())
+    assert services == []
+    assert client.last_error is not None
+    assert "Supervisor token not available" in client.last_error
+
+    ok, err = asyncio.run(
+        client.send_notification(
+            domain="notify",
+            service="mobile_app",
+            title="Test",
+            message="Msg",
+        )
+    )
+    assert ok is False
+    assert "No Supervisor token provided" in (err or "")
+
+
+def test_rest_client_http_errors_and_entities():
+    # Mock transport responding to /services with 401
+    def handler_401(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"message": "Unauthorized"})
+
+    transport_401 = httpx.MockTransport(handler_401)
+    client_401 = RestHomeAssistantClient("http://supervisor/core/api", token="bad_token", transport=transport_401)
+    svcs = asyncio.run(client_401.discover_services())
+    assert svcs == []
+    assert "401 Unauthorized" in client_401.last_error
+
+    # Mock transport responding to /services with 403
+    def handler_403(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"message": "Forbidden"})
+
+    transport_403 = httpx.MockTransport(handler_403)
+    client_403 = RestHomeAssistantClient("http://supervisor/core/api", token="bad_token", transport=transport_403)
+    svcs_403 = asyncio.run(client_403.discover_services())
+    assert svcs_403 == []
+    assert "403 Forbidden" in client_403.last_error
+
+    # Mock transport successfully discovering services AND notify entities
+    def handler_success(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/core/api/services":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "domain": "notify",
+                        "services": {
+                            "notify": {"name": "Notify Service", "description": "General broadcast"},
+                            "persistent_notification": {"name": "HA Notification", "description": "Web banner"},
+                        },
+                    },
+                    {
+                        "domain": "persistent_notification",
+                        "services": {
+                            "create": {"name": "Create Notification", "description": "Creates notification"},
+                        },
+                    },
+                ],
+            )
+        elif request.url.path == "/core/api/states":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "entity_id": "notify.living_room_tv",
+                        "state": "idle",
+                        "attributes": {"friendly_name": "Living Room TV Notification"},
+                    },
+                    {
+                        "entity_id": "light.kitchen",
+                        "state": "on",
+                    },
+                ],
+            )
+        return httpx.Response(404)
+
+    transport_success = httpx.MockTransport(handler_success)
+    client_ok = RestHomeAssistantClient("http://supervisor/core/api", token="valid_token", transport=transport_success)
+    svcs_ok = asyncio.run(client_ok.discover_services())
+    assert len(svcs_ok) == 4
+    assert any(s.ha_service == "living_room_tv" and s.target_type == "entity" for s in svcs_ok)
+    assert any(s.ha_domain == "persistent_notification" and s.ha_service == "create" for s in svcs_ok)
+    assert client_ok.last_error is None

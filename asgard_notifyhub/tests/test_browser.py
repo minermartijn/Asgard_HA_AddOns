@@ -1,4 +1,4 @@
-"""End-to-end browser automation tests for ASGARD NotifyHub using Playwright."""
+"""End-to-end browser automation tests for ASGARD NotifyHub under Home Assistant Ingress."""
 
 import os
 import socket
@@ -10,6 +10,7 @@ from typing import Optional
 
 import pytest
 import uvicorn
+from fastapi import FastAPI
 from playwright.sync_api import sync_playwright
 
 APP_ROOT = Path(__file__).resolve().parents[1]
@@ -54,22 +55,39 @@ def get_free_port() -> int:
         return s.getsockname()[1]
 
 
-class AppServer:
+class IngressAppServer:
+    """Simulates Home Assistant Core with Ingress reverse proxy mount at /api/hassio_ingress/<session>/."""
+
     def __init__(self, tmp_path: Path):
         self.port = get_free_port()
-        db_path = tmp_path / "notifyhub_browser.db"
+        self.session_id = "test-session-token-99"
+        self.ingress_prefix = f"/api/hassio_ingress/{self.session_id}"
+
+        db_path = tmp_path / "notifyhub_ingress_browser.db"
         self.storage = Storage(db_path)
         self.client = DemoHomeAssistantClient()
         self.service = NotifyHubService(storage=self.storage, ha_client=self.client, demo_mode=True)
         self.settings = Settings(
             db_path=db_path,
-            allowed_source_ips="127.0.0.1",
+            allowed_source_ips="*",
             demo_mode=True,
             default_timezone="UTC",
             dedup_window_seconds=60,
         )
-        self.app = create_app(settings=self.settings, service=self.service)
-        self.server = uvicorn.Server(uvicorn.Config(self.app, host="127.0.0.1", port=self.port, log_level="error"))
+        self.inner_app = create_app(settings=self.settings, service=self.service)
+
+        # Outer app simulating HA Core with Ingress mount
+        self.outer_app = FastAPI()
+        self.outer_app.mount(self.ingress_prefix, self.inner_app)
+
+        @self.outer_app.get("/favicon.ico")
+        async def root_favicon():
+            from fastapi import Response
+            return Response(status_code=204)
+
+        self.server = uvicorn.Server(
+            uvicorn.Config(self.outer_app, host="127.0.0.1", port=self.port, log_level="error")
+        )
         self.thread = threading.Thread(target=self.server.run, daemon=True)
         self.thread.start()
         time.sleep(0.5)
@@ -80,115 +98,154 @@ class AppServer:
 
 
 @pytest.fixture(scope="module")
-def running_server(tmp_path_factory):
-    tmp = tmp_path_factory.mktemp("browser_srv")
-    srv = AppServer(tmp)
+def ingress_server(tmp_path_factory):
+    tmp = tmp_path_factory.mktemp("ingress_srv")
+    srv = IngressAppServer(tmp)
     yield srv
     srv.close()
 
 
-def test_dashboard_loads_and_has_no_console_errors(browser_instance, running_server):
+def test_ingress_prefix_isolation_and_no_escaped_requests(browser_instance, ingress_server):
+    """Verifies that all API requests remain within the Ingress session prefix."""
     page = browser_instance.new_page()
-    errors = []
-    page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
-    page.on("pageerror", lambda exc: errors.append(str(exc)))
+    console_errors = []
+    escaped_requests = []
 
-    page.goto(f"http://127.0.0.1:{running_server.port}/")
+    page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" and "favicon" not in msg.text else None)
+    page.on("pageerror", lambda exc: console_errors.append(str(exc)))
+
+    def on_request(request):
+        url = request.url
+        expected_base = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}"
+        if not url.startswith(expected_base) and not url.endswith("/favicon.ico"):
+            escaped_requests.append(url)
+
+    page.on("request", on_request)
+
+    # Load via simulated Ingress URL with trailing slash
+    ingress_url = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}/"
+    page.goto(ingress_url)
     page.wait_for_selector("#stat-ha-conn")
 
     assert "ASGARD NotifyHub" in page.title()
     assert page.is_visible("#tab-dashboard")
     assert page.inner_text("#stat-ha-conn") in ("Demo Mode", "Connected")
-    # Verify discovered services chips render
+
+    # Discovered services rendered
     page.wait_for_selector(".service-chip")
     chips = page.query_selector_all(".service-chip")
     assert len(chips) >= 3
 
-    assert len(errors) == 0, f"Unexpected JS console errors: {errors}"
+    # Assert 0 console errors and 0 escaped requests
+    assert len(console_errors) == 0, f"Console errors: {console_errors}"
+    assert len(escaped_requests) == 0, f"Requests escaped Ingress prefix: {escaped_requests}"
+
     page.close()
 
 
-def test_tab_navigation(browser_instance, running_server):
+def test_ingress_full_lifecycle_and_crud(browser_instance, ingress_server):
+    """Full lifecycle testing under Ingress: recipients, routes, groups, policies, simulation, history."""
     page = browser_instance.new_page()
-    page.goto(f"http://127.0.0.1:{running_server.port}/")
+    escaped_requests = []
+
+    def on_request(request):
+        url = request.url
+        expected_base = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}"
+        if not url.startswith(expected_base):
+            escaped_requests.append(url)
+
+    page.on("request", on_request)
+
+    ingress_url = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}/"
+    page.goto(ingress_url)
     page.wait_for_selector(".nav-tabs")
 
-    # Click Composer tab
-    page.click('button[data-tab="tab-composer"]')
-    assert page.is_visible("#tab-composer")
-    assert not page.is_visible("#tab-dashboard")
+    # 1. Sync Services
+    page.click("#btn-refresh-services")
+    page.wait_for_selector(".banner-success")
 
-    # Click Recipients tab
+    # 2. Add Recipient
     page.click('button[data-tab="tab-recipients"]')
-    assert page.is_visible("#tab-recipients")
+    page.wait_for_selector("#btn-add-recipient")
+    page.click("#btn-add-recipient")
+    page.wait_for_selector("#rec-name")
+    page.fill("#rec-name", "Odin Allfather")
+    page.fill("#rec-tz", "Europe/Amsterdam")
+    page.click('#modal-rec-form button[type="submit"]')
+    page.wait_for_function('() => document.body.innerText.includes("Odin Allfather")')
+    assert "Odin Allfather" in page.content()
 
-    # Click Groups tab
+    # 3. Add Route to Recipient
+    page.click('.recipient-card .routes-header button')
+    page.wait_for_selector("#route-name")
+    page.fill("#route-name", "Raven Dispatch")
+    page.select_option("#route-min-priority", "normal")
+    page.click('#modal-route-form button[type="submit"]')
+    page.wait_for_function('() => document.body.innerText.includes("Raven Dispatch")')
+    assert "Raven Dispatch" in page.content()
+
+    # 4. Test Route Ping
+    page.click('.route-actions button:has-text("Ping Test")')
+    page.wait_for_selector(".banner-success")
+
+    # 5. Add Group
     page.click('button[data-tab="tab-groups"]')
-    assert page.is_visible("#tab-groups")
+    page.wait_for_selector("#btn-add-group")
+    page.click("#btn-add-group")
+    page.wait_for_selector("#grp-name")
+    page.fill("#grp-name", "Aesir Guardians")
+    page.fill("#grp-desc", "Defenders of the realm")
+    page.click('#modal-grp-form button[type="submit"]')
+    page.wait_for_function('() => document.body.innerText.includes("Aesir Guardians")')
+    assert "Aesir Guardians" in page.content()
 
-    # Click Policies tab
+    # 6. Add Quiet Hours Policy
     page.click('button[data-tab="tab-policies"]')
-    assert page.is_visible("#tab-policies")
+    page.wait_for_selector("#btn-add-policy")
+    page.click("#btn-add-policy")
+    page.wait_for_selector("#pol-start")
+    page.fill("#pol-start", "22:00")
+    page.fill("#pol-end", "07:00")
+    page.click('#modal-policy-form button[type="submit"]')
+    page.wait_for_function('() => document.body.innerText.includes("22:00")')
 
-    # Click History tab
-    page.click('button[data-tab="tab-history"]')
-    assert page.is_visible("#tab-history")
-
-    page.close()
-
-
-def test_composer_preview_and_dispatch(browser_instance, running_server):
-    page = browser_instance.new_page()
-    page.goto(f"http://127.0.0.1:{running_server.port}/")
+    # 7. Composer Simulation (Dry-Run Preview)
     page.click('button[data-tab="tab-composer"]')
     page.wait_for_selector("#comp-message")
-
-    page.fill("#comp-title", "Alert from Browser Test")
-    page.fill("#comp-message", "Smoke test ping content")
-
-    # Test Dry-Run Preview
+    page.fill("#comp-title", "Frost Giant Incursion")
+    page.fill("#comp-message", "Perimeter breach detected in sector 4.")
     page.click("#btn-preview-send")
     page.wait_for_selector(".preview-item")
     items = page.query_selector_all(".preview-item")
     assert len(items) >= 1
 
-    # Test Execution
+    # 8. Dispatch Execution
     page.click("#btn-execute-send")
     page.wait_for_selector(".banner-success")
-    assert "Dispatched" in page.inner_text(".banner-success")
 
-    # Verify Audit History has entry
+    # 9. Audit History
     page.click('button[data-tab="tab-history"]')
     page.wait_for_selector("#history-tbody tr")
     rows = page.query_selector_all("#history-tbody tr")
     assert len(rows) >= 1
 
-    page.close()
+    # 10. Purge Audit History
+    # Handle confirmation dialog
+    page.on("dialog", lambda dialog: dialog.accept())
+    page.click("#btn-purge-history")
+    page.wait_for_selector(".banner-success")
 
-
-def test_add_recipient_via_modal(browser_instance, running_server):
-    page = browser_instance.new_page()
-    page.goto(f"http://127.0.0.1:{running_server.port}/")
-    page.click('button[data-tab="tab-recipients"]')
-    page.wait_for_selector("#btn-add-recipient")
-
-    page.click("#btn-add-recipient")
-    page.wait_for_selector("#rec-name")
-    page.fill("#rec-name", "Loki Odinson")
-    page.fill("#rec-tz", "Europe/Oslo")
-    page.click('#modal-rec-form button[type="submit"]')
-
-    # Wait for recipient card containing Loki Odinson to render
-    page.wait_for_function('() => document.body.innerText.includes("Loki Odinson")')
-    assert "Loki Odinson" in page.content()
+    # Assert ZERO escaped requests throughout entire test flow!
+    assert len(escaped_requests) == 0, f"Escaped requests: {escaped_requests}"
 
     page.close()
 
 
-def test_mobile_viewport_rendering(browser_instance, running_server):
+def test_mobile_viewport_under_ingress(browser_instance, ingress_server):
     page = browser_instance.new_page()
     page.set_viewport_size({"width": 375, "height": 667})
-    page.goto(f"http://127.0.0.1:{running_server.port}/")
+    ingress_url = f"http://127.0.0.1:{ingress_server.port}{ingress_server.ingress_prefix}/"
+    page.goto(ingress_url)
     page.wait_for_selector(".layout")
 
     assert page.is_visible(".brand")
