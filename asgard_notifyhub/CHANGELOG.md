@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Resolve frontend API requests under the active Home Assistant Ingress session path instead of accidentally calling Home Assistant Core /api endpoints (which returned 404).
 - Correct overview statistics bindings for discovered notification actions and quiet-hours suppression.
+- Never silently use simulated notification services when the Supervisor token is absent and demo mode is disabled.
 - Reject untrusted source IPs even if a client spoofs the `X-Ingress-Path` header.
 - Add a browser regression scenario for the actual Ingress URL prefix, including creating a recipient and viewing audit history.
 
