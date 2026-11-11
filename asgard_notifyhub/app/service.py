@@ -89,7 +89,13 @@ class NotifyHubService:
     async def get_summary(self) -> AppStatusSummary:
         stats = self.storage.get_stats_24h()
         services = await self.get_services()
-        ha_connected = len(services) > 0 or self.demo_mode
+        last_error = getattr(self.ha_client, "last_error", None)
+
+        if self.demo_mode:
+            ha_connected = True
+        else:
+            token = getattr(self.ha_client, "token", None)
+            ha_connected = bool(token) and len(services) > 0 and last_error is None
 
         return AppStatusSummary(
             recipients_count=stats["recipients_count"],
@@ -98,8 +104,11 @@ class NotifyHubService:
             policies_count=stats["policies_count"],
             submissions_24h=stats["submissions_24h"],
             blocked_quiet_hours_24h=stats["blocked_quiet_hours_24h"],
+            quiet_silenced_24h=stats["blocked_quiet_hours_24h"],
             failures_24h=stats["failures_24h"],
             ha_connected=ha_connected,
+            ha_error=last_error if not ha_connected else None,
             discovered_services_count=len(services),
+            services_discovered=len(services),
             demo_mode=self.demo_mode,
         )

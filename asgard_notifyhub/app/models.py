@@ -59,6 +59,7 @@ class DeliveryStatus(str, Enum):
 class TargetType(str, Enum):
     RECIPIENT = "recipient"
     GROUP = "group"
+    GLOBAL = "global"
 
 
 class TargetService(BaseModel):
@@ -68,6 +69,11 @@ class TargetService(BaseModel):
     description: Optional[str] = None
     target_type: str = "service"  # "service" or "entity"
     supported: bool = True
+    full_name: Optional[str] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.full_name:
+            self.full_name = f"{self.ha_domain}.{self.ha_service}"
 
 
 class Route(BaseModel):
@@ -190,7 +196,10 @@ class AppStatusSummary(BaseModel):
     policies_count: int = 0
     submissions_24h: int = 0
     blocked_quiet_hours_24h: int = 0
+    quiet_silenced_24h: int = 0
     failures_24h: int = 0
     ha_connected: bool = False
+    ha_error: Optional[str] = None
     discovered_services_count: int = 0
+    services_discovered: int = 0
     demo_mode: bool = False

@@ -1,6 +1,6 @@
 name: ASGARD NotifyHub
 slug: asgard_notifyhub
-version: "0.1.0"
+version: "0.1.1"
 description: "Centralized notification policy, quiet hours, recipient routing, and delivery auditing for Home Assistant"
 url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_notifyhub"
 stage: experimental

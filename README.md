@@ -17,7 +17,7 @@
 | **[Home Stock](home_stock/README.md)** | 1.0.0 | Household stock quantities, a shopping list, and Home Assistant integration. |
 | **[Baby Tracker](baby_tracker/)** | 1.0.5 | Mobile-friendly feeding, diaper, sleep and growth tracking. |
 | **[ASGARD Backup Inspector](asgard_backup_inspector/README.md)** | 0.3.1 | Read-only dashboard for Home Assistant and Google Drive backup metadata: counts, freshness, redundancy matrix, timeline and storage trends. |
-| **[ASGARD NotifyHub](asgard_notifyhub/README.md)** | 0.1.0 | Centralized notification policy, quiet hours, recipient routing, and delivery auditing for Home Assistant. |
+| **[ASGARD NotifyHub](asgard_notifyhub/README.md)** | 0.1.1 | Centralized notification policy, quiet hours, recipient routing, and delivery auditing for Home Assistant. |
 
 The app store reads each app's own `config.yaml` version. A GitHub Release is additional release documentation and does not replace the app store's update mechanism.
 

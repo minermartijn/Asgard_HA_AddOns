@@ -1,7 +1,12 @@
 """Tests for HTTP API routes, Ingress security, and JSON responses."""
 
 import pytest
+from app.client import RestHomeAssistantClient
+from app.main import create_app
 from app.models import Priority, TargetType
+from app.service import NotifyHubService
+from app.settings import Settings
+from app.storage import Storage
 
 
 def test_ingress_security_allowed_proxy(client):
@@ -28,9 +33,36 @@ def test_ingress_forbidden_untrusted_ip(app):
     assert res.status_code == 403
     assert "Forbidden" in res.json().get("detail", "")
 
-    # But if X-Ingress-Path header is present, supervisor proxy request is permitted
-    res_ingress = untrusted_client.get("/api/health", headers={"X-Ingress-Path": "/api/hassio_ingress/xyz"})
-    assert res_ingress.status_code == 200
+    # Forged X-Ingress-Path header from untrusted IP must STILL be rejected with 403
+    res_forged = untrusted_client.get("/api/health", headers={"X-Ingress-Path": "/api/hassio_ingress/xyz"})
+    assert res_forged.status_code == 403
+    assert "Forbidden" in res_forged.json().get("detail", "")
+
+
+def test_missing_token_never_enters_demo_mode(tmp_path):
+    """When demo_mode is False and token is missing, must expose disconnected state."""
+    db_file = tmp_path / "test_no_token.db"
+    settings = Settings(
+        data_dir=tmp_path,
+        demo_mode=False,
+        supervisor_token=None,
+        allowed_source_ips="*",
+    )
+    prod_app = create_app(settings=settings)
+    from conftest import make_test_client
+    test_client = make_test_client(prod_app)
+
+    res_health = test_client.get("/api/health")
+    assert res_health.status_code == 200
+    assert res_health.json()["demo_mode"] is False
+
+    res_sum = test_client.get("/api/summary")
+    assert res_sum.status_code == 200
+    sum_data = res_sum.json()
+    assert sum_data["demo_mode"] is False
+    assert sum_data["ha_connected"] is False
+    assert sum_data["discovered_services_count"] == 0
+    assert "Supervisor token not available" in (sum_data.get("ha_error") or "")
 
 
 def test_summary_and_services(client):
@@ -39,6 +71,10 @@ def test_summary_and_services(client):
     s_data = res_sum.json()
     assert s_data["ha_connected"] is True
     assert s_data["demo_mode"] is True
+
+    # Test frontend/backend contract aliases
+    assert s_data["discovered_services_count"] == s_data["services_discovered"]
+    assert s_data["blocked_quiet_hours_24h"] == s_data["quiet_silenced_24h"]
 
     res_svc = client.get("/api/services")
     assert res_svc.status_code == 200
@@ -107,6 +143,7 @@ def test_groups_api(client):
 
 
 def test_policies_api(client):
+    # Test recipient policy
     create_res = client.post("/api/policies", json={
         "target_id": "household_admin",
         "target_type": "recipient",
@@ -117,6 +154,17 @@ def test_policies_api(client):
     })
     assert create_res.status_code == 200
     pid = create_res.json()["policy"]["id"]
+
+    # Test global policy
+    create_global = client.post("/api/policies", json={
+        "target_id": "household_global",
+        "target_type": "global",
+        "quiet_start": "23:00",
+        "quiet_end": "07:00",
+        "day_mask": [0, 1, 2, 3, 4, 5, 6],
+        "urgent_override": False,
+    })
+    assert create_global.status_code == 200
 
     list_res = client.get("/api/policies")
     assert list_res.status_code == 200
