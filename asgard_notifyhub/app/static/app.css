@@ -953,6 +953,7 @@ code {
   display: none;
   flex-direction: column;
   gap: 0.7rem;
+  min-height: 2.5rem;
 }
 
 .history-card {

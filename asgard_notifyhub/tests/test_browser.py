@@ -580,6 +580,8 @@ def test_responsive_viewports_no_horizontal_overflow_and_mobile_audit_cards(
         assert page.is_visible(btn_selector), f"Tab button {tid} not visible at {viewport}"
         page.click(btn_selector)
         page.wait_for_selector(f"#{tid}")
+        if tid == "tab-history":
+            page.wait_for_selector("#history-cards .history-card, #history-cards .empty-state", state="attached")
         assert page.is_visible(f"#{tid}")
         assert page.get_attribute(btn_selector, "aria-selected") == "true"
 
