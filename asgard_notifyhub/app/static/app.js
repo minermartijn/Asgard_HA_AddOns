@@ -790,12 +790,12 @@
           const records = res.records || [];
           const summary = summarizeDispatch(records);
 
+          renderPreviewFromRecords(records, summary);
           showBanner(summary.bannerText, summary.bannerType, 8000);
           if (summary.submitted > 0) {
             el.compMessage.value = '';
           }
           await refreshAllData();
-          renderPreviewFromRecords(records, summary);
         } catch (err) {
           showBanner(`Dispatch error: ${err.message}`, 'error');
         }
