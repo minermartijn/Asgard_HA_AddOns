@@ -40,6 +40,10 @@ firebase-debug.log
 .vscode/
 .gemini/
 
+# Local databases and runtime data
+*.db
+.data/
+
 # ASGARD private AI development plans (must never be published)
 /ASGARD_PRIVATE_PLAN/
 /.asgard-private/

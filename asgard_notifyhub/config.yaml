@@ -1,0 +1,29 @@
+name: ASGARD NotifyHub
+slug: asgard_notifyhub
+version: "0.1.0"
+description: "Centralized notification policy, quiet hours, recipient routing, and delivery auditing for Home Assistant"
+url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_notifyhub"
+stage: experimental
+arch:
+  - amd64
+startup: application
+boot: auto
+init: false
+ingress: true
+ingress_port: 8098
+panel_icon: mdi:bell-cog-outline
+panel_title: NotifyHub
+panel_admin: true
+hassio_api: true
+hassio_role: default
+homeassistant_api: true
+options:
+  demo_mode: false
+  default_timezone: "UTC"
+  dedup_window_seconds: 300
+  retention_days: 30
+schema:
+  demo_mode: bool
+  default_timezone: str
+  dedup_window_seconds: int(10,3600)
+  retention_days: int(1,365)
