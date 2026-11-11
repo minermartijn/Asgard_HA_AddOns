@@ -28,9 +28,9 @@ def test_ingress_forbidden_untrusted_ip(app):
     assert res.status_code == 403
     assert "Forbidden" in res.json().get("detail", "")
 
-    # But if X-Ingress-Path header is present, supervisor proxy request is permitted
+    # A forged Ingress header MUST NOT bypass the network trust boundary.
     res_ingress = untrusted_client.get("/api/health", headers={"X-Ingress-Path": "/api/hassio_ingress/xyz"})
-    assert res_ingress.status_code == 200
+    assert res_ingress.status_code == 403
 
 
 def test_summary_and_services(client):
