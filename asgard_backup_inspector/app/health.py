@@ -33,6 +33,8 @@ def evaluate(
     unknown_size_count = len(items) - len(known_sizes)
     dated = [b.created_utc for b in items if b.created_utc is not None]
     unknown_date_count = len(items) - len(dated)
+    full_count = sum(1 for b in items if b.backup_type == "full")
+    partial_count = sum(1 for b in items if b.backup_type == "partial")
 
     newest = max(dated) if dated else None
     age_seconds: Optional[int] = None
@@ -64,6 +66,8 @@ def evaluate(
         freshness=freshness,
         api_status=api_status,
         total_count=len(items),
+        full_backup_count=full_count,
+        partial_backup_count=partial_count,
         known_size_total_bytes=sum(known_sizes),
         unknown_size_count=unknown_size_count,
         unknown_date_count=unknown_date_count,

@@ -3,76 +3,255 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="light dark" />
+  <meta name="color-scheme" content="dark light" />
   <title>ASGARD Backup Inspector</title>
-  <!-- All URLs are relative so the page works under any Ingress prefix. -->
+  <!-- Relative paths allow serving under any Home Assistant Ingress prefix -->
   <link rel="stylesheet" href="static/app.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <span class="rune" aria-hidden="true">ᛒ</span>
-      <div>
-        <h1>Backup Inspector</h1>
-        <p class="subtitle">Read-only view of your Home Assistant backup metadata</p>
+      <div class="brand-text">
+        <div class="title-row">
+          <h1>Backup Inspector</h1>
+          <span class="version-tag">v0.2.0</span>
+        </div>
+        <p class="subtitle">Read-only view of Home Assistant backup metadata</p>
       </div>
     </div>
-    <button id="refresh" type="button" class="btn">Refresh</button>
+    <div class="top-actions">
+      <button id="toggle-diagnostics" type="button" class="btn btn-secondary" title="View Diagnostics & Settings">
+        Diagnostics
+      </button>
+      <button id="refresh" type="button" class="btn btn-primary" title="Refresh backup metadata">
+        <span class="btn-text">Refresh</span>
+      </button>
+    </div>
   </header>
 
   <main>
+    <!-- Banners -->
     <div id="demo-banner" class="banner banner-info" hidden>
-      Demo mode: the data below is synthetic and does not come from your system.
+      <strong>Demo mode:</strong> Synthetic backup records are displayed for testing. No data was read from your system.
     </div>
     <div id="error-banner" class="banner banner-error" role="alert" hidden></div>
+    <div id="cached-banner" class="banner banner-warn" hidden></div>
     <div id="warnings" class="banner banner-warn" hidden></div>
 
+    <!-- Diagnostics Panel (Collapsible) -->
+    <section id="diagnostics-panel" class="panel diagnostics-panel" hidden>
+      <div class="panel-header">
+        <h2>Diagnostics & Environment</h2>
+        <button id="close-diagnostics" type="button" class="btn-close" aria-label="Close diagnostics">&times;</button>
+      </div>
+      <div class="diag-grid">
+        <div class="diag-item">
+          <span class="diag-label">Ingress Proxy</span>
+          <span class="diag-value" id="diag-ingress">Protected (Supervisor 172.30.32.2)</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Supervisor API Status</span>
+          <span class="diag-value" id="diag-api">Checking…</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Freshness Threshold</span>
+          <span class="diag-value" id="diag-threshold">48 hours</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Supervisor Days Until Stale</span>
+          <span class="diag-value" id="diag-supervisor-stale">–</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Last Success Time</span>
+          <span class="diag-value" id="diag-last-success">Not checked yet</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Cache Policy</span>
+          <span class="diag-value">5 min cache · 10s refresh rate limit</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Overview Cards -->
     <section class="cards" aria-live="polite" aria-busy="true" id="cards">
-      <article class="card">
-        <h2>Freshness</h2>
-        <p class="value" id="freshness">Loading…</p>
+      <article class="card card-hero">
+        <div class="card-head">
+          <h2>Backup Health</h2>
+          <span id="freshness-badge" class="status-badge status-unknown">Checking…</span>
+        </div>
+        <p class="value" id="freshness">Checking…</p>
         <p class="hint" id="freshness-hint"></p>
       </article>
+
       <article class="card">
-        <h2>Backups found</h2>
+        <div class="card-head">
+          <h2>Backups Found</h2>
+        </div>
         <p class="value" id="count">–</p>
+        <p class="hint" id="count-breakdown">–</p>
       </article>
+
       <article class="card">
-        <h2>Most recent backup</h2>
+        <div class="card-head">
+          <h2>Most Recent Backup</h2>
+        </div>
         <p class="value" id="newest">–</p>
         <p class="hint" id="newest-date"></p>
       </article>
+
       <article class="card">
-        <h2>Known total storage</h2>
+        <div class="card-head">
+          <h2>Known Total Storage</h2>
+        </div>
         <p class="value" id="storage">–</p>
         <p class="hint" id="storage-hint"></p>
       </article>
     </section>
 
-    <section class="panel">
-      <h2>Backups</h2>
+    <!-- Visualizations: Storage Breakdown & Timeline -->
+    <div class="viz-grid">
+      <!-- Storage Visualization -->
+      <section class="panel viz-panel">
+        <div class="panel-header">
+          <h2>Storage Breakdown</h2>
+          <span class="panel-tag">Known Sizes</span>
+        </div>
+        <div id="storage-viz-body">
+          <div class="bar-chart-container">
+            <div class="bar-labels">
+              <span id="full-storage-label">Full: –</span>
+              <span id="partial-storage-label">Partial: –</span>
+            </div>
+            <div class="stacked-bar" id="storage-stacked-bar">
+              <div id="bar-full" class="bar-segment bar-full" title="Full Backups"></div>
+              <div id="bar-partial" class="bar-segment bar-partial" title="Partial Backups"></div>
+            </div>
+          </div>
+          <div class="storage-locations" id="storage-locations">
+            <!-- Location badges populated dynamically -->
+          </div>
+          <p class="storage-disclaimer">
+            Reflects uncompressed/archive size reported by Home Assistant. Actual disk usage may differ.
+          </p>
+        </div>
+      </section>
+
+      <!-- Backup Timeline -->
+      <section class="panel viz-panel">
+        <div class="panel-header">
+          <h2>Recent Backup Distribution</h2>
+          <span class="panel-tag">Chronological</span>
+        </div>
+        <div id="timeline-container" class="timeline-container">
+          <div id="timeline-track" class="timeline-track">
+            <!-- Timeline nodes populated dynamically -->
+          </div>
+          <p class="timeline-disclaimer">
+            Chronological display of current listed backups. Not an incremental growth measurement.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <!-- History Trend Section (Measured Snapshots) -->
+    <section class="panel history-panel" id="history-section">
+      <div class="panel-header">
+        <h2>Storage History Trend</h2>
+        <span class="panel-tag" id="history-points-count">0 recorded</span>
+      </div>
+      <div id="history-body">
+        <p id="history-empty" class="hint">
+          Recording storage measurements. Trend charts will populate as multiple checks occur over time.
+        </p>
+        <div id="history-chart" class="history-chart-wrapper" hidden>
+          <svg id="history-svg" viewBox="0 0 600 120" preserveAspectRatio="none" class="history-svg"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Backups Table Section with Filters & Search -->
+    <section class="panel table-panel">
+      <div class="panel-header-controls">
+        <h2>Backup Records</h2>
+        <div class="table-controls">
+          <div class="search-box">
+            <input type="search" id="table-search" placeholder="Search by name, ID or location…" aria-label="Search backups" />
+          </div>
+          <div class="filters-row">
+            <select id="filter-type" aria-label="Filter by backup type">
+              <option value="all">All Types</option>
+              <option value="full">Full Backups</option>
+              <option value="partial">Partial Backups</option>
+            </select>
+            <select id="filter-location" aria-label="Filter by storage location">
+              <option value="all">All Locations</option>
+            </select>
+            <select id="filter-protection" aria-label="Filter by password protection">
+              <option value="all">All Protection</option>
+              <option value="protected">Protected (Password)</option>
+              <option value="unprotected">Unprotected</option>
+            </select>
+            <select id="sort-order" aria-label="Sort backups">
+              <option value="date-desc">Newest First</option>
+              <option value="date-asc">Oldest First</option>
+              <option value="size-desc">Largest First</option>
+              <option value="size-asc">Smallest First</option>
+              <option value="name-asc">Name (A–Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <p id="empty" class="empty" hidden>No backups found.</p>
+      <p id="no-filter-results" class="empty" hidden>No backups match your current search and filters.</p>
+
       <div class="table-wrap">
         <table id="backup-table" hidden>
           <thead>
             <tr>
-              <th scope="col">Created</th>
-              <th scope="col">Age</th>
-              <th scope="col">Name</th>
-              <th scope="col">Type</th>
-              <th scope="col">Size</th>
-              <th scope="col">Password</th>
-              <th scope="col">Locations</th>
+              <th scope="col" class="th-protect" title="Password Protection">Lock</th>
+              <th scope="col" class="th-date sortable" data-sort="date">Created</th>
+              <th scope="col" class="th-age">Age</th>
+              <th scope="col" class="th-name sortable" data-sort="name">Name / ID</th>
+              <th scope="col" class="th-type sortable" data-sort="type">Type</th>
+              <th scope="col" class="th-size sortable" data-sort="size">Size</th>
+              <th scope="col" class="th-loc">Location(s)</th>
             </tr>
           </thead>
           <tbody id="backup-rows"></tbody>
         </table>
       </div>
+
+      <!-- Pagination -->
+      <div class="pagination-bar" id="pagination-bar" hidden>
+        <span id="page-info" class="page-info">Showing 0–0 of 0 backups</span>
+        <div class="pagination-controls">
+          <label for="page-size" class="page-size-label">Rows:</label>
+          <select id="page-size" aria-label="Page size">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All</option>
+          </select>
+          <button id="btn-prev-page" type="button" class="btn btn-sm" disabled>&larr; Prev</button>
+          <button id="btn-next-page" type="button" class="btn btn-sm" disabled>Next &rarr;</button>
+        </div>
+      </div>
     </section>
 
+    <!-- Footer -->
     <footer class="meta">
-      <span id="last-checked">Not checked yet</span>
-      <span>Status reflects listed metadata only — it does not verify that a backup can be restored.</span>
+      <div class="meta-left">
+        <span id="last-checked">Not checked yet</span>
+        <span class="read-only-notice">
+          &bull; Read-only metadata view. Backups are never modified, created, or restored by this App.
+        </span>
+      </div>
+      <div class="meta-right">
+        <span>Built with &#9889; by Asgard</span>
+      </div>
     </footer>
   </main>
 

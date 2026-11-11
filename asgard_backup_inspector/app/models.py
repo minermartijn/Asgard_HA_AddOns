@@ -47,6 +47,8 @@ class HealthSummary(BaseModel):
     freshness: Freshness
     api_status: ApiStatus
     total_count: int
+    full_backup_count: int = 0
+    partial_backup_count: int = 0
     known_size_total_bytes: int
     unknown_size_count: int
     unknown_date_count: int

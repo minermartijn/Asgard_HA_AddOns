@@ -1,6 +1,6 @@
 name: ASGARD Backup Inspector
 slug: asgard_backup_inspector
-version: "0.1.0"
+version: "0.2.0"
 description: "Read-only dashboard for Home Assistant backup metadata: count, freshness and known size"
 url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_backup_inspector"
 stage: experimental

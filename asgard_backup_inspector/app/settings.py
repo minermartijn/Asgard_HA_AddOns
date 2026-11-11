@@ -23,6 +23,7 @@ class Settings:
     supervisor_url: str = "http://supervisor"
     # Ingress only reaches the App from the Supervisor proxy at this address.
     allowed_clients: tuple[str, ...] = ("172.30.32.2",)
+    data_dir: str = "/data"
     min_refresh_interval_seconds: float = 10.0
     cache_ttl_seconds: float = 300.0
 
@@ -56,4 +57,5 @@ def load_settings(options_path: str | os.PathLike = "/data/options.json") -> Set
         supervisor_token=os.getenv("SUPERVISOR_TOKEN") or None,
         supervisor_url=os.getenv("ASGARD_SUPERVISOR_URL", "http://supervisor"),
         allowed_clients=allowed,
+        data_dir=os.getenv("ASGARD_DATA_DIR", "/data"),
     )

@@ -11,9 +11,10 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from .health import evaluate
+from .history import HistoryStore
 from .models import ApiStatus, BackupSummary, HealthSummary
 from .sources import BackupSource, SourceError
 
@@ -34,6 +35,7 @@ class InspectorService:
     stale_threshold_hours: int
     cache_ttl_seconds: float = 300.0
     min_refresh_interval_seconds: float = 10.0
+    history_store: Optional[HistoryStore] = None
     clock: Callable[[], datetime] = field(default=lambda: datetime.now(timezone.utc))
     monotonic: Callable[[], float] = field(default=time.monotonic)
 
@@ -60,6 +62,20 @@ class InspectorService:
             fetched_utc=self._last_attempt_utc,
             fetched_monotonic=self._last_attempt_monotonic,
         )
+        if self.history_store is not None:
+            try:
+                sum_val = self.summary()
+                self.history_store.record_snapshot(
+                    total_count=sum_val.total_count,
+                    full_count=sum_val.full_backup_count,
+                    partial_count=sum_val.partial_backup_count,
+                    known_size_bytes=sum_val.known_size_total_bytes,
+                    unknown_size_count=sum_val.unknown_size_count,
+                    freshness=sum_val.freshness.value,
+                    now=self._last_attempt_utc,
+                )
+            except Exception:
+                pass
 
     def _cache_valid(self) -> bool:
         if self._last_attempt_monotonic is None:
@@ -90,6 +106,11 @@ class InspectorService:
             return []
         epoch = datetime.min.replace(tzinfo=timezone.utc)
         return sorted(self._snapshot.backups, key=lambda b: b.created_utc or epoch, reverse=True)
+
+    def history(self) -> list[dict[str, Any]]:
+        if self.history_store is None:
+            return []
+        return [e.to_dict() for e in self.history_store.get_entries()]
 
     def summary(self) -> HealthSummary:
         snap = self._snapshot
