@@ -137,3 +137,10 @@ def test_future_date_warns():
 def test_threshold_boundary_is_inclusive_fresh():
     s = evaluate([backup(hours_ago=48)], now=NOW, stale_threshold_hours=48, api_status=ApiStatus.OK)
     assert s.freshness is Freshness.FRESH
+
+
+def test_mixed_valid_and_missing_dates_warns():
+    s = evaluate([backup(hours_ago=2), backup(hours_ago=None)], now=NOW, stale_threshold_hours=48, api_status=ApiStatus.OK)
+    assert s.freshness is Freshness.FRESH
+    assert s.unknown_date_count == 1
+    assert any("no readable creation date" in w for w in s.warnings)

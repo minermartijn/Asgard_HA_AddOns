@@ -218,3 +218,22 @@ def test_settings_defaults_and_clamping(tmp_path, monkeypatch):
 
     opts.write_text("{not json")
     assert load_settings(opts).stale_threshold_hours == 48
+
+
+def test_build_source():
+    from app.main import build_source
+    from app.sources import DemoBackupSource, SupervisorBackupSource
+
+    assert isinstance(build_source(Settings(demo_mode=True)), DemoBackupSource)
+    sup = build_source(Settings(demo_mode=False, supervisor_token="abc"))
+    assert isinstance(sup, SupervisorBackupSource)
+    assert sup.token == "abc"
+
+
+def test_mock_source_missing_file(tmp_path):
+    import asyncio
+
+    missing_src = MockBackupSource(fixture_path=tmp_path / "absent.json")
+    with pytest.raises(SourceError) as exc:
+        asyncio.run(missing_src.fetch())
+    assert exc.value.status == ApiStatus.UNAVAILABLE
