@@ -136,6 +136,23 @@ main { padding: clamp(1rem, 3vw, 2.5rem); max-width: 1350px; margin: 0 auto; }
 .value { font-size: 1.65rem; font-weight: 700; margin: 0.2rem 0; overflow-wrap: anywhere; letter-spacing: -0.02em; }
 .hint { margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.82rem; }
 
+/* Redundancy & Multi-Location Indicators */
+.redundancy-panel { margin-bottom: 1.5rem; border-top: 3px solid var(--accent); }
+.redundancy-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.8rem; margin-top: 0.8rem;
+}
+.redundancy-card {
+  background: var(--surface-alt); padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0.4rem; justify-content: space-between;
+}
+.redundancy-label {
+  font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.04em;
+}
+.redundancy-hint { margin: 0; font-size: 0.76rem; color: var(--text-muted); }
+
+/* Cloud Card */
+.card-cloud { border-left: 4px solid #a855f7; }
+
 /* Status Badges */
 .status-badge {
   font-size: 0.72rem; font-weight: 700; text-transform: uppercase; padding: 0.2rem 0.55rem;
@@ -147,6 +164,10 @@ main { padding: clamp(1rem, 3vw, 2.5rem); max-width: 1350px; margin: 0 auto; }
 .status-unknown { background: var(--muted-badge-bg); color: var(--muted-badge); border: 1px solid var(--border); }
 .status-unavailable { background: var(--bad-bg); color: var(--bad); border: 1px solid rgba(239, 68, 68, 0.3); }
 .status-partial { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(245, 158, 11, 0.3); }
+.status-confirmed { background: var(--ok-bg); color: var(--ok); border: 1px solid rgba(34, 197, 94, 0.3); }
+.status-incomplete { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(245, 158, 11, 0.3); }
+.status-present { background: var(--ok-bg); color: var(--ok); border: 1px solid rgba(34, 197, 94, 0.3); }
+.status-not_detected { background: var(--muted-badge-bg); color: var(--muted-badge); border: 1px solid var(--border); }
 
 /* Visualizations Grid */
 .viz-grid {
@@ -235,7 +256,23 @@ th.sortable:hover { color: var(--text); }
 .type-partial { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
 .loc-badge {
   font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 4px; background: var(--surface-alt);
-  border: 1px solid var(--border); color: var(--text-muted); font-family: monospace;
+  border: 1px solid var(--border); color: var(--text-muted); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+}
+.loc-both {
+  background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 600;
+}
+.loc-local {
+  background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600;
+}
+.loc-cloud {
+  background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-weight: 600;
+}
+.loc-pending {
+  background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 600;
+}
+.sync-state-tag {
+  display: inline-block; font-size: 0.7rem; color: var(--text-muted); margin-left: 0.35rem; font-style: italic;
 }
 .lock-icon { font-size: 1rem; }
 .lock-yes { color: var(--ok); }

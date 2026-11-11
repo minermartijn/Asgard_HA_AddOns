@@ -230,4 +230,52 @@ describe('Frontend Formatting Functions', () => {
     assert.equal(mockDOM['storage'].textContent, '13.5 GB');
     assert.ok(mockDOM['last-checked'].textContent.startsWith('Last checked: '));
   });
+
+  test('renderSummary with Google Drive and redundancy indicators updates properly', () => {
+    const summaryData = {
+      freshness: 'fresh',
+      api_status: 'ok',
+      total_count: 20,
+      local_count: 14,
+      remote_count: 20,
+      both_count: 14,
+      pending_count: 0,
+      local_only_count: 0,
+      remote_only_count: 6,
+      known_size_total_bytes: 14500000000,
+      cloud_freshness: 'fresh',
+      offsite_coverage: 'confirmed',
+      full_backup_coverage: 'present',
+      google_drive: {
+        enabled: true,
+        available: true,
+        sensor_entity_id: 'sensor.backup_state',
+        state: 'backed_up',
+        backups_in_google_drive: 20,
+        backups_in_home_assistant: 14,
+        size_in_google_drive: '4.2 GB',
+        last_uploaded_utc: '2026-11-11T05:00:00+00:00',
+      }
+    };
+
+    function renderGdrive(s) {
+      const gd = s.google_drive;
+      if (gd && gd.available) {
+        mockDocument.getElementById('gdrive-badge').textContent = gd.state.toUpperCase();
+        mockDocument.getElementById('gdrive-count').textContent = `${gd.backups_in_google_drive} in Drive · ${gd.backups_in_home_assistant} in HA`;
+      }
+      mockDocument.getElementById('ind-local-freshness').textContent = s.freshness.toUpperCase();
+      mockDocument.getElementById('ind-cloud-freshness').textContent = s.cloud_freshness.toUpperCase();
+      mockDocument.getElementById('ind-offsite-coverage').textContent = s.offsite_coverage.toUpperCase();
+      mockDocument.getElementById('ind-full-coverage').textContent = s.full_backup_coverage.toUpperCase();
+    }
+
+    assert.doesNotThrow(() => renderGdrive(summaryData));
+    assert.equal(mockDOM['gdrive-badge'].textContent, 'BACKED_UP');
+    assert.equal(mockDOM['gdrive-count'].textContent, '20 in Drive · 14 in HA');
+    assert.equal(mockDOM['ind-local-freshness'].textContent, 'FRESH');
+    assert.equal(mockDOM['ind-cloud-freshness'].textContent, 'FRESH');
+    assert.equal(mockDOM['ind-offsite-coverage'].textContent, 'CONFIRMED');
+    assert.equal(mockDOM['ind-full-coverage'].textContent, 'PRESENT');
+  });
 });

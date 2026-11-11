@@ -2,6 +2,18 @@
 
 All notable changes to ASGARD Backup Inspector will be documented in this file.
 
+## [0.3.0] - 2026-11-11
+
+### Added
+- **Multi-Location Backup Discovery:** Discovers and aggregates backups stored in Home Assistant (`GET /backups/info`) alongside backups synchronized with the third-party Home Assistant Google Drive Backup add-on via `sensor.backup_state`.
+- **Deduplication Engine:** Confidently merges replicated archives by matching canonical slugs, avoiding double-counting storage or duplicate records.
+- **Remote-Only Backups:** Discovers and displays cloud-only archives stored in Google Drive that have been rotated or deleted locally.
+- **Backup Redundancy Matrix:** Independent status evaluations for Local Freshness, Cloud Freshness, Off-Site Coverage (Confirmed, Incomplete, None), and Full-Backup Coverage (Present, Stale, Not Detected).
+- **Google Drive Overview Card:** Live cloud sync state, backups stored in Drive, last upload timestamp, cloud storage usage, and available free space.
+- **Location Filtering:** Filter table records by *All Locations*, *Both (Local + Drive)*, *Local Only*, *Google Drive Only*, or *Pending Upload*.
+- **Multi-Provider Architecture:** Decoupled `SupervisorBackupProvider`, `GoogleDriveBackupProvider`, and `BackupAggregator` with independent failure isolation.
+- **Permission Boundary Documentation:** Added `homeassistant_api: true` strictly to query `sensor.backup_state` via read-only GET requests without write access.
+
 ## [0.2.0] - 2026-11-11
 
 ### Fixed

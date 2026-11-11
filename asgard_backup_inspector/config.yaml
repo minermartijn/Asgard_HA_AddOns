@@ -1,7 +1,7 @@
 name: ASGARD Backup Inspector
 slug: asgard_backup_inspector
-version: "0.2.0"
-description: "Read-only dashboard for Home Assistant backup metadata: count, freshness and known size"
+version: "0.3.0"
+description: "Read-only dashboard for Home Assistant and Google Drive backup metadata: counts, freshness, redundancy and storage"
 url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_backup_inspector"
 stage: experimental
 arch:
@@ -16,12 +16,19 @@ panel_title: Backup Inspector
 panel_admin: true
 # Supervisor API access for GET /backups/info only. The "default" role allows
 # paths ending in /info. The broader "backup" role (create/restore/delete) is
-# intentionally NOT requested. homeassistant_api is not needed.
+# intentionally NOT requested.
+# homeassistant_api is used solely to query the Google Drive Backup sensor state
+# (GET /core/api/states/sensor.backup_state) without write or management access.
 hassio_api: true
 hassio_role: default
+homeassistant_api: true
 options:
   stale_threshold_hours: 48
   demo_mode: false
+  enable_google_drive: true
+  google_drive_sensor: "sensor.backup_state"
 schema:
   stale_threshold_hours: int(1,2160)
   demo_mode: bool
+  enable_google_drive: bool
+  google_drive_sensor: str

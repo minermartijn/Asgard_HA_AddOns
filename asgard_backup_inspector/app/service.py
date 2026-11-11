@@ -13,15 +13,19 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
+from .aggregator import AggregationResult, BackupAggregator
 from .health import evaluate
 from .history import HistoryStore
-from .models import ApiStatus, BackupSummary, HealthSummary
+from .models import ApiStatus, BackupSummary, GoogleDriveSummary, HealthSummary
+from .providers import CloudBackupProvider
 from .sources import BackupSource, SourceError
 
 
 @dataclass
 class _Snapshot:
     backups: list[BackupSummary]
+    aggregation: Optional[AggregationResult]
+    google_drive: Optional[GoogleDriveSummary]
     days_until_stale: Optional[int]
     warnings: list[str]
     partial: bool
@@ -33,6 +37,7 @@ class _Snapshot:
 class InspectorService:
     source: BackupSource
     stale_threshold_hours: int
+    cloud_provider: Optional[CloudBackupProvider] = None
     cache_ttl_seconds: float = 300.0
     min_refresh_interval_seconds: float = 10.0
     history_store: Optional[HistoryStore] = None
@@ -48,17 +53,51 @@ class InspectorService:
     async def _fetch(self) -> None:
         self._last_attempt_utc = self.clock()
         self._last_attempt_monotonic = self.monotonic()
+
         try:
-            result = await self.source.fetch()
+            local_result = await self.source.fetch()
+            self._last_error = None
         except SourceError as err:
             self._last_error = err
             return
-        self._last_error = None
+
+        gdrive_summary: Optional[GoogleDriveSummary] = None
+        gdrive_items = []
+        if self.cloud_provider is not None:
+            try:
+                gdrive_summary, gdrive_items = await self.cloud_provider.fetch(
+                    self.stale_threshold_hours, now=self._last_attempt_utc
+                )
+            except Exception as e:
+                gdrive_summary = GoogleDriveSummary(
+                    enabled=getattr(self.cloud_provider, "enabled", True),
+                    available=False,
+                    error_message=f"Google Drive provider error: {e}",
+                )
+                gdrive_items = []
+
+        locals_list = local_result.backups
+        days_stale = local_result.days_until_stale
+        warnings = list(local_result.warnings)
+        is_partial = local_result.skipped > 0
+
+        agg = BackupAggregator.aggregate(
+            locals_list,
+            gdrive_summary,
+            gdrive_items,
+            stale_threshold_hours=self.stale_threshold_hours,
+            now=self._last_attempt_utc,
+        )
+
+        all_warnings = warnings + [w for w in agg.warnings if w not in warnings]
+
         self._snapshot = _Snapshot(
-            backups=result.backups,
-            days_until_stale=result.days_until_stale,
-            warnings=result.warnings,
-            partial=result.skipped > 0,
+            backups=agg.backups,
+            aggregation=agg,
+            google_drive=gdrive_summary,
+            days_until_stale=days_stale,
+            warnings=all_warnings,
+            partial=is_partial,
             fetched_utc=self._last_attempt_utc,
             fetched_monotonic=self._last_attempt_monotonic,
         )
@@ -121,14 +160,36 @@ class InspectorService:
             api_status = ApiStatus.PARTIAL
         else:
             api_status = ApiStatus.OK
-        result = evaluate(
-            snap.backups if snap else None,
-            now=self.clock(),
-            stale_threshold_hours=self.stale_threshold_hours,
-            api_status=api_status,
-            supervisor_days_until_stale=snap.days_until_stale if snap else None,
-            extra_warnings=snap.warnings if snap else None,
-        )
+
+        if snap is not None and snap.aggregation is not None:
+            agg = snap.aggregation
+            result = evaluate(
+                snap.backups,
+                now=self.clock(),
+                stale_threshold_hours=self.stale_threshold_hours,
+                api_status=api_status,
+                supervisor_days_until_stale=snap.days_until_stale,
+                extra_warnings=snap.warnings,
+                local_count=agg.local_count,
+                remote_count=agg.remote_count,
+                both_count=agg.both_count,
+                pending_count=agg.pending_count,
+                local_only_count=agg.local_only_count,
+                remote_only_count=agg.remote_only_count,
+                cloud_freshness=agg.cloud_freshness,
+                offsite_coverage=agg.offsite_coverage,
+                full_backup_coverage=agg.full_backup_coverage,
+                google_drive=snap.google_drive,
+            )
+        else:
+            result = evaluate(
+                snap.backups if snap else None,
+                now=self.clock(),
+                stale_threshold_hours=self.stale_threshold_hours,
+                api_status=api_status,
+                supervisor_days_until_stale=snap.days_until_stale if snap else None,
+                extra_warnings=snap.warnings if snap else None,
+            )
         result.last_checked_utc = self._last_attempt_utc
         result.last_success_utc = snap.fetched_utc if snap else None
         result.showing_cached_data = err is not None and snap is not None

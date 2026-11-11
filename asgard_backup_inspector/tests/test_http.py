@@ -258,3 +258,52 @@ def test_favicon_route():
     c = client_for(mock("backups_ok.json"))
     res = c.get("/favicon.ico")
     assert res.status_code in (200, 204)
+
+
+def test_api_summary_with_cloud_provider():
+    from app.providers import DemoGoogleDriveProvider
+
+    cloud = DemoGoogleDriveProvider(enabled=True)
+    settings = Settings(min_refresh_interval_seconds=0.0, stale_threshold_hours=24 * 365 * 10)
+    app = create_app(settings=settings, source=mock("backups_ok.json"), cloud_provider=cloud)
+    c = TestClient(app, client=SUPERVISOR_PROXY)
+
+    s = c.get("/api/summary").json()
+    assert s["api_status"] == "ok"
+    # Local backups has fake0001, fake0002, fake0003; Demo cloud has demo0001, demo0002, demo_drive_001, demo_drive_002
+    assert s["google_drive"] is not None
+    assert s["google_drive"]["available"] is True
+    assert s["google_drive"]["state"] == "backed_up"
+    assert s["google_drive"]["backups_in_google_drive"] == 4
+    assert s["remote_count"] >= 2
+    assert s["offsite_coverage"] in ("confirmed", "incomplete", "none", "unknown")
+
+    b = c.get("/api/backups").json()
+    assert b["total"] >= 5
+    # Check that location_category is present on all items
+    for item in b["items"]:
+        assert "location_category" in item
+        assert "locations" in item
+
+
+def test_api_summary_cloud_provider_error_isolation():
+    from app.models import GoogleDriveSummary
+    from app.providers import CloudBackupProvider
+
+    class FaultyCloudProvider:
+        enabled = True
+
+        async def fetch(self, stale_threshold_hours, now=None):
+            raise RuntimeError("Cloud network timeout")
+
+    settings = Settings(min_refresh_interval_seconds=0.0)
+    app = create_app(settings=settings, source=mock("backups_ok.json"), cloud_provider=FaultyCloudProvider())
+    c = TestClient(app, client=SUPERVISOR_PROXY)
+
+    # Local backups must still succeed even when cloud provider raises!
+    s = c.get("/api/summary").json()
+    assert s["api_status"] == "ok"
+    assert s["total_count"] == 3
+    assert s["google_drive"] is not None
+    assert s["google_drive"]["available"] is False
+    assert "error" in s["google_drive"]["error_message"].lower()

@@ -102,15 +102,18 @@ def make_14_backups():
     return items
 
 
+from app.providers import CloudBackupProvider, DemoGoogleDriveProvider
+
+
 class AppServer:
-    def __init__(self, source: BackupSource, tmp_path: Path):
+    def __init__(self, source: BackupSource, tmp_path: Path, cloud_provider: Optional[CloudBackupProvider] = None):
         self.port = get_free_port()
         self.settings = Settings(
             allowed_clients=("*",),
             data_dir=str(tmp_path),
             min_refresh_interval_seconds=2.0,
         )
-        self.app = create_app(settings=self.settings, source=source)
+        self.app = create_app(settings=self.settings, source=source, cloud_provider=cloud_provider)
         self.server = uvicorn.Server(uvicorn.Config(self.app, host="127.0.0.1", port=self.port, log_level="error"))
         self.thread = threading.Thread(target=self.server.run, daemon=True)
         self.thread.start()
@@ -330,5 +333,59 @@ def test_theme_mode(browser_instance, tmp_path):
         page_dark.wait_for_selector("#cards")
         assert page_dark.locator("#freshness").is_visible()
         page_dark.close()
+    finally:
+        server.stop()
+
+
+def test_google_drive_and_redundancy_dashboard(browser_instance, tmp_path):
+    """Test multi-location discovery, Google Drive card, redundancy indicators, and location filter."""
+    local_data = make_14_backups()
+    local_data[0]["slug"] = "demo0001"
+    local_data[1]["slug"] = "demo0002"
+    source = StaticMockSource(backups=local_data)
+    cloud = DemoGoogleDriveProvider(enabled=True)
+    server = AppServer(source=source, tmp_path=tmp_path, cloud_provider=cloud)
+
+    console_errors = []
+
+    try:
+        page = browser_instance.new_page()
+        page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+
+        page.goto(f"http://127.0.0.1:{server.port}/")
+        page.wait_for_selector("#backup-rows tr")
+
+        # 1. Redundancy Indicators
+        page.wait_for_selector("#ind-local-freshness")
+        assert page.locator("#ind-local-freshness").text_content() in ("FRESH", "RECENT")
+        assert page.locator("#ind-cloud-freshness").text_content() in ("FRESH", "RECENT")
+        assert page.locator("#ind-offsite-coverage").text_content() in ("CONFIRMED", "INCOMPLETE", "NONE")
+        assert page.locator("#ind-full-coverage").text_content() in ("PRESENT", "STALE")
+
+        # 2. Google Drive Card
+        page.wait_for_selector("#card-google-drive")
+        assert page.locator("#gdrive-badge").text_content() == "BACKED_UP"
+        assert "Drive" in page.locator("#gdrive-count").text_content()
+
+        # 3. Location filtering in table
+        # Select "google_drive" location filter
+        page.select_option("#filter-location", "google_drive")
+        # In DemoGoogleDriveProvider, there are 2 Drive-only backups
+        rows = page.locator("#backup-rows tr")
+        assert rows.count() == 2
+        for i in range(rows.count()):
+            assert "Drive Only" in rows.nth(i).text_content()
+
+        # Select "all" location filter
+        page.select_option("#filter-location", "all")
+        # 14 local + 2 drive-only = 16 total unique backups
+        page.wait_for_selector("#backup-rows tr")
+        assert page.locator("#count").text_content() == "16"
+
+        # 4. Zero unexpected console errors
+        filtered_errors = [e for e in console_errors if "favicon" not in e.lower()]
+        assert len(filtered_errors) == 0, f"Console errors: {filtered_errors}"
+
+        page.close()
     finally:
         server.stop()
