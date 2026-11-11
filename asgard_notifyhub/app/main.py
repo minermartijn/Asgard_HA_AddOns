@@ -87,10 +87,8 @@ def create_app(
                 logger.warning("Rejected request with invalid client IP: %s", client_host)
                 return JSONResponse(status_code=403, content={"detail": "Forbidden: invalid source IP"})
 
-        # Support Home Assistant Ingress dynamic root path
+        # Extract Ingress path for redirect rewriting
         ingress_path = request.headers.get("x-ingress-path", "")
-        if ingress_path:
-            request.scope["root_path"] = ingress_path.rstrip("/")
 
         response: Response = await call_next(request)
 
