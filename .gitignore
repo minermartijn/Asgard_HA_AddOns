@@ -36,3 +36,10 @@ firebase-debug.log
 # VS Code
 .vscode/
 .gemini/
+
+# ASGARD private AI development plans (must never be published)
+/ASGARD_PRIVATE_PLAN/
+/.asgard-private/
+/ASGARD_MASTER_PLAN.md
+/AGENT_KICKOFF_PROMPT.md
+/PRIVATE_BUILD_ROADMAP.md
