@@ -231,10 +231,9 @@ def test_ingress_prefix_api_routes_and_recipient_creation(browser_instance, tmp_
         page.click('#modal-rec-form button[type="submit"]')
         page.wait_for_function('() => document.body.innerText.includes("Ingress Test Person")')
 
-        page.click('button[data-tab="tab-history"]')
-        page.wait_for_function(
-            '() => !document.body.innerText.includes("History load error:")'
-        )
+        with page.expect_response(lambda response: prefix + "/api/history" in response.url) as history:
+            page.click('button[data-tab="tab-history"]')
+        assert history.value.status == 200
         # All requested application API endpoints must use the same ingress prefix.
         for endpoint in (
             "/api/summary", "/api/services", "/api/recipients",
