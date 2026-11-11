@@ -11,6 +11,22 @@ permissions:
   contents: read
 
 jobs:
+  private-boundary-check:
+    name: Verify private boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check for tracked private files
+        run: |
+          PROHIBITED='(^ASGARD_PRIVATE_PLAN/|^\.asgard-private/|^ASGARD_MASTER_PLAN\.md$|^AGENT_KICKOFF_PROMPT\.md$|^PRIVATE_BUILD_ROADMAP\.md$)'
+          TRACKED=$(git ls-files | grep -E "$PROHIBITED" || true)
+          if [ -n "$TRACKED" ]; then
+            echo "ERROR: Private development files are tracked in git:"
+            echo "$TRACKED"
+            exit 1
+          fi
+          echo "PASS: No private development files are tracked."
+
   source-validation:
     name: Python syntax and add-on manifests
     runs-on: ubuntu-latest
@@ -20,14 +36,14 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check Python syntax
-        run: python -m compileall -q baby_tracker home_stock ha_addons/src ha_full_mcp/src
+        run: python -m compileall -q baby_tracker home_stock ha_addons/src ha_full_mcp/src asgard_backup_inspector/app asgard_backup_inspector/tests
       - name: Validate add-on metadata
         run: |
           python -m pip install --disable-pip-version-check 'PyYAML>=6,<7'
           python - <<'PY'
           from pathlib import Path
           import yaml
-          for folder in ("ha_full_mcp", "ha_addons", "baby_tracker", "home_stock"):
+          for folder in ("ha_full_mcp", "ha_addons", "baby_tracker", "home_stock", "asgard_backup_inspector"):
               manifest = Path(folder) / "config.yaml"
               data = yaml.safe_load(manifest.read_text(encoding="utf-8"))
               for required in ("name", "version", "slug", "arch"):
@@ -35,6 +51,23 @@ jobs:
               assert (Path(folder) / "Dockerfile").exists(), f"{folder}: missing Dockerfile"
               print(f"{folder}: {data['name']} v{data['version']}")
           PY
+
+  asgard-backup-inspector-tests:
+    name: Backup Inspector tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: asgard_backup_inspector/requirements-dev.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r asgard_backup_inspector/requirements-dev.txt
+      - name: Run test suite
+        run: python -m pytest asgard_backup_inspector/tests -v
 
   mcp-regressions:
     name: MCP regressions (${{ matrix.addon }})

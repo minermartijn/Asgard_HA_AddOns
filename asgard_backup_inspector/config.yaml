@@ -1,0 +1,27 @@
+name: ASGARD Backup Inspector
+slug: asgard_backup_inspector
+version: "0.1.0"
+description: "Read-only dashboard for Home Assistant backup metadata: count, freshness and known size"
+url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_backup_inspector"
+stage: experimental
+arch:
+  - amd64
+startup: application
+boot: auto
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:archive-search-outline
+panel_title: Backup Inspector
+panel_admin: true
+# Supervisor API access for GET /backups/info only. The "default" role allows
+# paths ending in /info. The broader "backup" role (create/restore/delete) is
+# intentionally NOT requested. homeassistant_api is not needed.
+hassio_api: true
+hassio_role: default
+options:
+  stale_threshold_hours: 48
+  demo_mode: false
+schema:
+  stale_threshold_hours: int(1,2160)
+  demo_mode: bool

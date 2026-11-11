@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.git/
+.gitignore
+.DS_Store
+tests/
+requirements-dev.txt
+README.md
+DOCS.md
+CHANGELOG.md
+data/
+*.db

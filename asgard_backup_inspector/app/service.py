@@ -1,0 +1,116 @@
+"""Caching layer between the HTTP API and a backup source.
+
+* One fetch at a time (asyncio lock); concurrent callers share the result.
+* Manual refreshes are rate limited.
+* On failure, the last successful data is kept and flagged as cached.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Callable, Optional
+
+from .health import evaluate
+from .models import ApiStatus, BackupSummary, HealthSummary
+from .sources import BackupSource, SourceError
+
+
+@dataclass
+class _Snapshot:
+    backups: list[BackupSummary]
+    days_until_stale: Optional[int]
+    warnings: list[str]
+    partial: bool
+    fetched_utc: datetime
+    fetched_monotonic: float
+
+
+@dataclass
+class InspectorService:
+    source: BackupSource
+    stale_threshold_hours: int
+    cache_ttl_seconds: float = 300.0
+    min_refresh_interval_seconds: float = 10.0
+    clock: Callable[[], datetime] = field(default=lambda: datetime.now(timezone.utc))
+    monotonic: Callable[[], float] = field(default=time.monotonic)
+
+    _snapshot: Optional[_Snapshot] = field(default=None, init=False)
+    _last_error: Optional[SourceError] = field(default=None, init=False)
+    _last_attempt_utc: Optional[datetime] = field(default=None, init=False)
+    _last_attempt_monotonic: Optional[float] = field(default=None, init=False)
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock, init=False)
+
+    async def _fetch(self) -> None:
+        self._last_attempt_utc = self.clock()
+        self._last_attempt_monotonic = self.monotonic()
+        try:
+            result = await self.source.fetch()
+        except SourceError as err:
+            self._last_error = err
+            return
+        self._last_error = None
+        self._snapshot = _Snapshot(
+            backups=result.backups,
+            days_until_stale=result.days_until_stale,
+            warnings=result.warnings,
+            partial=result.skipped > 0,
+            fetched_utc=self._last_attempt_utc,
+            fetched_monotonic=self._last_attempt_monotonic,
+        )
+
+    def _cache_valid(self) -> bool:
+        if self._last_attempt_monotonic is None:
+            return False
+        return (self.monotonic() - self._last_attempt_monotonic) < self.cache_ttl_seconds
+
+    async def ensure_fresh(self) -> None:
+        async with self._lock:
+            if not self._cache_valid():
+                await self._fetch()
+
+    def seconds_until_refresh_allowed(self) -> float:
+        if self._last_attempt_monotonic is None:
+            return 0.0
+        elapsed = self.monotonic() - self._last_attempt_monotonic
+        return max(0.0, self.min_refresh_interval_seconds - elapsed)
+
+    async def refresh(self) -> bool:
+        """Force a fetch. Returns False if rate limited."""
+        async with self._lock:
+            if self.seconds_until_refresh_allowed() > 0:
+                return False
+            await self._fetch()
+            return True
+
+    def backups(self) -> list[BackupSummary]:
+        if self._snapshot is None:
+            return []
+        epoch = datetime.min.replace(tzinfo=timezone.utc)
+        return sorted(self._snapshot.backups, key=lambda b: b.created_utc or epoch, reverse=True)
+
+    def summary(self) -> HealthSummary:
+        snap = self._snapshot
+        err = self._last_error
+        if err is not None:
+            api_status = err.status
+        elif snap is not None and snap.partial:
+            api_status = ApiStatus.PARTIAL
+        else:
+            api_status = ApiStatus.OK
+        result = evaluate(
+            snap.backups if snap else None,
+            now=self.clock(),
+            stale_threshold_hours=self.stale_threshold_hours,
+            api_status=api_status,
+            supervisor_days_until_stale=snap.days_until_stale if snap else None,
+            extra_warnings=snap.warnings if snap else None,
+        )
+        result.last_checked_utc = self._last_attempt_utc
+        result.last_success_utc = snap.fetched_utc if snap else None
+        result.showing_cached_data = err is not None and snap is not None
+        result.demo_mode = bool(getattr(self.source, "demo", False))
+        result.error_message = err.message if err else None
+        return result

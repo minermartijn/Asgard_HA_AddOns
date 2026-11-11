@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>ASGARD Backup Inspector</title>
+  <!-- All URLs are relative so the page works under any Ingress prefix. -->
+  <link rel="stylesheet" href="static/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="rune" aria-hidden="true">ᛒ</span>
+      <div>
+        <h1>Backup Inspector</h1>
+        <p class="subtitle">Read-only view of your Home Assistant backup metadata</p>
+      </div>
+    </div>
+    <button id="refresh" type="button" class="btn">Refresh</button>
+  </header>
+
+  <main>
+    <div id="demo-banner" class="banner banner-info" hidden>
+      Demo mode: the data below is synthetic and does not come from your system.
+    </div>
+    <div id="error-banner" class="banner banner-error" role="alert" hidden></div>
+    <div id="warnings" class="banner banner-warn" hidden></div>
+
+    <section class="cards" aria-live="polite" aria-busy="true" id="cards">
+      <article class="card">
+        <h2>Freshness</h2>
+        <p class="value" id="freshness">Loading…</p>
+        <p class="hint" id="freshness-hint"></p>
+      </article>
+      <article class="card">
+        <h2>Backups found</h2>
+        <p class="value" id="count">–</p>
+      </article>
+      <article class="card">
+        <h2>Most recent backup</h2>
+        <p class="value" id="newest">–</p>
+        <p class="hint" id="newest-date"></p>
+      </article>
+      <article class="card">
+        <h2>Known total storage</h2>
+        <p class="value" id="storage">–</p>
+        <p class="hint" id="storage-hint"></p>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Backups</h2>
+      <p id="empty" class="empty" hidden>No backups found.</p>
+      <div class="table-wrap">
+        <table id="backup-table" hidden>
+          <thead>
+            <tr>
+              <th scope="col">Created</th>
+              <th scope="col">Age</th>
+              <th scope="col">Name</th>
+              <th scope="col">Type</th>
+              <th scope="col">Size</th>
+              <th scope="col">Password</th>
+              <th scope="col">Locations</th>
+            </tr>
+          </thead>
+          <tbody id="backup-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="meta">
+      <span id="last-checked">Not checked yet</span>
+      <span>Status reflects listed metadata only — it does not verify that a backup can be restored.</span>
+    </footer>
+  </main>
+
+  <script src="static/app.js"></script>
+</body>
+</html>

@@ -8,8 +8,9 @@ Each app in this repository has its own version in its folder's `config.yaml`. D
 | Lifeboat | `ha_addons` | `ha-lifeboat-v1.4.0` |
 | Baby Tracker | `baby_tracker` | `baby-tracker-v1.0.5` |
 | Home Stock | `home_stock` | `home-stock-v1.0.0` |
+| Backup Inspector | `asgard_backup_inspector` | `asgard-backup-inspector-v0.1.0` |
 
-**Published initial releases (2026-11-09):** `ha-full-mcp-v1.11.1` and `ha-lifeboat-v1.4.0`. The Baby Tracker and Home Stock tags remain proposals until verified and published.
+**Published initial releases (2026-11-09):** `ha-full-mcp-v1.11.1` and `ha-lifeboat-v1.4.0`. The Baby Tracker, Home Stock, and Backup Inspector tags remain proposals until verified and published.
 
 ## Checklist before publishing
 

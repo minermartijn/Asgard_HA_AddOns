@@ -12,6 +12,7 @@ on:
           - ha_addons
           - baby_tracker
           - home_stock
+          - asgard_backup_inspector
       version:
         description: Exact version from the app config.yaml (for example 1.11.0)
         required: true
@@ -44,7 +45,13 @@ jobs:
           import yaml
           addon = os.environ["ADDON"]
           version = os.environ["VERSION"]
-          prefixes = {"ha_full_mcp": "ha-full-mcp", "ha_addons": "ha-lifeboat", "baby_tracker": "baby-tracker", "home_stock": "home-stock"}
+          prefixes = {
+              "ha_full_mcp": "ha-full-mcp",
+              "ha_addons": "ha-lifeboat",
+              "baby_tracker": "baby-tracker",
+              "home_stock": "home-stock",
+              "asgard_backup_inspector": "asgard-backup-inspector",
+          }
           if addon not in prefixes or not re.fullmatch(r"\d+\.\d+\.\d+", version):
               raise SystemExit("Invalid add-on or release version")
           config = yaml.safe_load((Path(addon) / "config.yaml").read_text(encoding="utf-8"))

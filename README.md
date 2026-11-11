@@ -16,6 +16,7 @@
 | **[HA Addon MCP Server — Lifeboat](ha_addons/README.md)** | 1.4.0 | Separate MCP recovery path for app logs, lifecycle actions, and targeted app backup/restore. |
 | **[Home Stock](home_stock/README.md)** | 1.0.0 | Household stock quantities, a shopping list, and Home Assistant integration. |
 | **[Baby Tracker](baby_tracker/)** | 1.0.5 | Mobile-friendly feeding, diaper, sleep and growth tracking. |
+| **[ASGARD Backup Inspector](asgard_backup_inspector/README.md)** | 0.1.0 | Read-only dashboard for Home Assistant backup metadata: count, freshness and known size (experimental). |
 
 The app store reads each app's own `config.yaml` version. A GitHub Release is additional release documentation and does not replace the app store's update mechanism.
 

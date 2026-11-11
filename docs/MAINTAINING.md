@@ -1,6 +1,6 @@
 # Maintainer guide
 
-This is the development and release reference for **Asgard Home Assistant Apps**. The four apps are independently versioned and packaged as Home Assistant app containers. See [CONTRIBUTING.md](../CONTRIBUTING.md), [SECURITY.md](../SECURITY.md), and [release procedures](RELEASING.md).
+This is the development and release reference for **Asgard Home Assistant Apps**. The apps are independently versioned and packaged as Home Assistant app containers. See [CONTRIBUTING.md](../CONTRIBUTING.md), [SECURITY.md](../SECURITY.md), and [release procedures](RELEASING.md).
 
 ## Apps and layout
 
@@ -10,6 +10,7 @@ This is the development and release reference for **Asgard Home Assistant Apps**
 | `ha_addons/` | HA Addon MCP Server (Lifeboat) | Python / MCP / Supervisor API | Separate app administration and recovery |
 | `baby_tracker/` | Baby Tracker | FastAPI / SQLite | Feeding, sleep, diaper and growth tracking |
 | `home_stock/` | Home Stock | FastAPI / SQLite | Household inventory and shopping-list integration |
+| `asgard_backup_inspector/` | ASGARD Backup Inspector | FastAPI / Ingress | Read-only backup metadata freshness and size dashboard |
 
 The root `repository.yaml` declares the app repository. Each app has its own `config.yaml`, `Dockerfile`, version and runtime entrypoint. Do not introduce a monorepo-wide version number.
 

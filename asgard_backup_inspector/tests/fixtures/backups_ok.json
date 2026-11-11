@@ -1,0 +1,45 @@
+{
+  "result": "ok",
+  "data": {
+    "days_until_stale": 3,
+    "backups": [
+      {
+        "slug": "fake0001",
+        "name": "Synthetic nightly full",
+        "date": "2026-10-10T02:00:00.000000+00:00",
+        "type": "full",
+        "size": 1228.8,
+        "size_bytes": 1288490189,
+        "location": null,
+        "locations": [null],
+        "protected": true,
+        "location_attributes": {".local": {"protected": true, "size_bytes": 1288490189}},
+        "compressed": true,
+        "content": {"homeassistant": true, "addons": ["fake_addon"], "folders": ["share"]}
+      },
+      {
+        "slug": "fake0002",
+        "name": "Synthetic partial before update",
+        "date": "2026-10-08T14:30:00+02:00",
+        "type": "partial",
+        "size": 0.17,
+        "size_bytes": 178257,
+        "location": "fake_nas",
+        "locations": [null, "fake_nas"],
+        "protected": false,
+        "compressed": true,
+        "content": {"homeassistant": false, "addons": [], "folders": ["ssl"]}
+      },
+      {
+        "slug": "fake0003",
+        "name": "Synthetic backup without size",
+        "date": "2026-10-01T09:30:00Z",
+        "type": "full",
+        "location": null,
+        "locations": [null],
+        "protected": false,
+        "compressed": true
+      }
+    ]
+  }
+}
