@@ -67,18 +67,21 @@ def create_app(
     app.state.settings = cfg
 
     # ---- Security & Ingress Middleware ----
+    # Only Home Assistant's trusted Supervisor Ingress proxy may reach this API.
+    # X-Ingress-Path is client-controlled and is NOT proof of authentication.
     @app.middleware("http")
     async def security_and_ingress_guard(request: Request, call_next):
         client_host = request.client.host if request.client else None
-        if allowed_networks and client_host:
-            try:
-                c_ip = ipaddress.ip_address(client_host)
-                if not any(c_ip in net for net in allowed_networks):
-                    # Also permit requests if valid Ingress header is present and proxy matches
-                    if not request.headers.get("X-Ingress-Path"):
-                        return JSONResponse(status_code=403, content={"detail": "Forbidden: untrusted source IP"})
-            except ValueError:
-                return JSONResponse(status_code=403, content={"detail": "Forbidden: invalid source IP"})
+        try:
+            client_ip = ipaddress.ip_address(client_host) if client_host else None
+        except ValueError:
+            client_ip = None
+
+        if client_ip is None or not any(client_ip in net for net in allowed_networks):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Forbidden: untrusted source IP"},
+            )
 
         response: Response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
