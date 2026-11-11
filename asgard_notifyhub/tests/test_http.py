@@ -23,6 +23,23 @@ def test_security_headers(client):
     assert res.headers.get("X-Content-Type-Options") == "nosniff"
     assert res.headers.get("X-Frame-Options") == "SAMEORIGIN"
     assert res.headers.get("Referrer-Policy") == "no-referrer"
+    assert "no-store" in (res.headers.get("Cache-Control") or "")
+
+
+def test_index_ingress_path_injection(client):
+    ingress_hdr = "/api/hassio_ingress/custom-session-token-42"
+    res = client.get("/", headers={"X-Ingress-Path": ingress_hdr})
+    assert res.status_code == 200
+    body = res.text
+    assert f'<base href="{ingress_hdr}/">' in body
+    assert f'window.__INGRESS_BASE__ = "{ingress_hdr}/";' in body
+
+
+def test_trailing_slash_resilience(client):
+    # Endpoints must handle trailing slashes directly without 307 redirects escaping Ingress
+    for path in ("/api/summary/", "/api/recipients/", "/api/groups/", "/api/policies/", "/api/history/"):
+        res = client.get(path, follow_redirects=False)
+        assert res.status_code == 200, f"Failed on path {path} with status {res.status_code}"
 
 
 def test_ingress_forbidden_untrusted_ip(app):
