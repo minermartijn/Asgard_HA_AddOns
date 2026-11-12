@@ -275,7 +275,11 @@ class WeatherService:
         )
         use_meteo = provider_mode in (WeatherProviderMode.AUTO, WeatherProviderMode.OPEN_METEO)
 
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        async with httpx.AsyncClient(
+            timeout=10.0,
+            follow_redirects=True,
+            headers={"User-Agent": "ASGARD-RainBreak/0.2.0 (Home Assistant App; https://github.com/minermartijn/Asgard_HA_AddOns)"},
+        ) as client:
             if use_buien:
                 try:
                     b_url = f"https://gpsgadget.buienradar.nl/data/raintext/?lat={latitude:.4f}&lon={longitude:.4f}"

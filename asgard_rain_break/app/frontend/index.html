@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ASGARD RainBreak — Smart Rain Radar &amp; Break Window Advisor</title>
-  <link rel="stylesheet" href="static/app.css?v=0.1.0" />
+  <link rel="stylesheet" href="static/app.css?v=0.2.0" />
 </head>
 <body>
   <div class="layout">
@@ -140,8 +140,11 @@
             </p>
           </div>
           <div class="panel-actions">
+            <button id="btn-preset-commute" class="btn btn-secondary" type="button" title="Create 08:00 Bike Commute, 10:00/12:30/15:00 Work Breaks, and 17:00 Ride Home">
+              &#128690; Commute + Workday Routine
+            </button>
             <button id="btn-preset-workday" class="btn btn-secondary" type="button" title="Create 10:00 (15m), 12:30 (30m), and 15:00 (15m) workday breaks">
-              &#9889; Load Workday Preset (10:00 · 12:30 · 15:00)
+              &#9889; Workday Breaks (10:00 &middot; 12:30 &middot; 15:00)
             </button>
             <button id="btn-add-break" class="btn btn-primary" type="button">+ Add Break Window</button>
           </div>
@@ -387,11 +390,11 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <span>ASGARD RainBreak v0.1.0</span>
+      <span>ASGARD RainBreak v0.2.0</span>
       <span>Buienradar 5m + Open-Meteo &middot; Smart Break Optimizer &middot; HA Notify &amp; Pushover</span>
     </footer>
   </div>
 
-  <script src="static/app.js?v=0.1.0"></script>
+  <script src="static/app.js?v=0.2.0"></script>
 </body>
 </html>

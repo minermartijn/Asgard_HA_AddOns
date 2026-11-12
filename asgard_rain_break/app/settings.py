@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 class Settings(BaseModel):
     app_name: str = "ASGARD RainBreak"
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     demo_mode: bool = False
     default_timezone: str = "Europe/Amsterdam"
     poll_interval_seconds: int = 180

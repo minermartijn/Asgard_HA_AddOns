@@ -32,8 +32,17 @@ class WeatherProviderMode(str, Enum):
 class ActivityType(str, Enum):
     WALK = "walk"
     BIKE = "bike"
+    BIKE_COMMUTE = "bike_commute"
     RUN = "run"
+    DOG_WALK = "dog_walk"
     BREAK = "break"
+    COMMUTE = "commute"
+
+
+class LocationRequirementMode(str, Enum):
+    ANY_LOCATION = "any_location"
+    ONLY_AT_LOCATION = "only_at_location"
+    ONLY_AWAY_FROM_LOCATION = "only_away_from_location"
 
 
 class BreakAdviceStatus(str, Enum):
@@ -43,6 +52,7 @@ class BreakAdviceStatus(str, Enum):
     SHIFT_LATER_DRY = "shift_later_dry"
     SHIFT_CLEANER_SLOT = "shift_cleaner_slot"
     HEAVY_RAIN_NO_WINDOW = "heavy_rain_no_window"
+    PAUSED_WRONG_LOCATION = "paused_wrong_location"
 
 
 class SavedLocation(BaseModel):
@@ -93,6 +103,9 @@ class BreakWindow(BaseModel):
     lead_alert_minutes: int = Field(default=25, ge=5, le=120)
     active_days: List[int] = Field(default_factory=lambda: [0, 1, 2, 3, 4])
     location_override_id: Optional[str] = None
+    location_req_mode: LocationRequirementMode = LocationRequirementMode.ANY_LOCATION
+    required_location_id: Optional[str] = None
+    destination_location_id: Optional[str] = None
     urgency_override: UrgencyLevel = UrgencyLevel.AUTO
     notify_when_dry: bool = False
     enabled: bool = True

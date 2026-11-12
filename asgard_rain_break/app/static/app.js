@@ -114,6 +114,7 @@
 
     // Breaks
     breaksList: document.getElementById('breaks-list'),
+    btnPresetCommute: document.getElementById('btn-preset-commute'),
     btnPresetWorkday: document.getElementById('btn-preset-workday'),
     btnAddBreak: document.getElementById('btn-add-break'),
 
@@ -326,14 +327,15 @@
 
     el.dashBreakEvaluations.innerHTML = state.evaluations
       .map((ev) => {
+        const isPaused = ev.status === 'paused_wrong_location';
         const isDry = ev.status === 'dry_on_schedule';
         const isShift =
           ev.status === 'shift_earlier_dry' ||
           ev.status === 'shift_later_dry' ||
           ev.status === 'dry_but_rain_soon_after' ||
           ev.status === 'shift_cleaner_slot';
-        const cardClass = isDry ? 'eval-dry' : isShift ? 'eval-shift' : 'eval-rain';
-        const badgeClass = isDry ? 'badge-success' : isShift ? 'badge-warning' : 'badge-danger';
+        const cardClass = isPaused ? 'eval-paused' : isDry ? 'eval-dry' : isShift ? 'eval-shift' : 'eval-rain';
+        const badgeClass = isPaused ? 'badge-muted' : isDry ? 'badge-success' : isShift ? 'badge-warning' : 'badge-danger';
         const statusLabel = {
           dry_on_schedule: 'Dry on Schedule',
           dry_but_rain_soon_after: 'Go On Time (Rain After)',
@@ -341,6 +343,7 @@
           shift_later_dry: 'Go Later · Dry Slot',
           shift_cleaner_slot: 'Shift · Lighter Rain',
           heavy_rain_no_window: 'Continuous Rain',
+          paused_wrong_location: 'Paused · Not At Location',
         }[ev.status] || ev.status;
 
         const urgBadge =
@@ -414,15 +417,26 @@
       !state.selectedForecastLocationId ||
       !state.forecasts.some((f) => f.location_id === state.selectedForecastLocationId)
     ) {
-      state.selectedForecastLocationId = state.forecasts[0].location_id;
+      const liveFc = state.forecasts.find((f) => f.location_id.startsWith('live_'));
+      state.selectedForecastLocationId = liveFc ? liveFc.location_id : state.forecasts[0].location_id;
     }
 
-    el.forecastLocationPills.innerHTML = state.forecasts
+    // Always sort live user locations first so they appear at the top/front of pills
+    const sortedForecasts = [...state.forecasts].sort((a, b) => {
+      const aLive = a.location_id.startsWith('live_') ? 1 : 0;
+      const bLive = b.location_id.startsWith('live_') ? 1 : 0;
+      return bLive - aLive;
+    });
+
+    el.forecastLocationPills.innerHTML = sortedForecasts
       .map((f) => {
+        const isLive = f.location_id.startsWith('live_');
         const active = f.location_id === state.selectedForecastLocationId ? 'active' : '';
-        const icon = f.location_id.startsWith('live_') ? '📍 ' : '🗺️ ';
-        return `<button type="button" class="loc-pill ${active}" data-loc-id="${escapeHtml(f.location_id)}">
-          ${icon}${escapeHtml(f.location_name)}
+        const liveClass = isLive ? 'loc-pill-live' : '';
+        const pulse = isLive ? '<span class="pulse-dot"></span>' : '';
+        const icon = isLive ? '📍 ' : '🗺️ ';
+        return `<button type="button" class="loc-pill ${liveClass} ${active}" data-loc-id="${escapeHtml(f.location_id)}" title="${escapeHtml(f.location_name)}">
+          ${pulse}${icon}${escapeHtml(f.location_name)}
         </button>`;
       })
       .join('');
@@ -656,6 +670,12 @@
             <div><strong>Live GPS:</strong> ${p.latitude !== null && p.longitude !== null ? `${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)}` : 'No GPS coordinates'}</div>
             <div><strong>Tracker Source:</strong> ${escapeHtml(p.source || 'N/A')}</div>
           </div>
+          ${p.latitude !== null && p.longitude !== null ? `
+          <div class="item-actions">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="window.rainBreakApp.importHaEntity('${escapeHtml(p.name)} Live GPS', ${p.latitude}, ${p.longitude}, '${escapeHtml(p.entity_id)}')">
+              + Save Current GPS as Location
+            </button>
+          </div>` : ''}
         </article>
       `
       );
@@ -672,6 +692,17 @@
           </div>
           <div class="item-meta">
             <div><strong>Coordinates:</strong> ${z.latitude.toFixed(4)}, ${z.longitude.toFixed(4)} (${z.radius_m}m radius)</div>
+          </div>
+          <div class="item-actions">
+            <button type="button" class="btn btn-sm btn-primary" title="Import this Home Assistant zone into saved locations" onclick="window.rainBreakApp.importHaEntity('${escapeHtml(z.name)}', ${z.latitude}, ${z.longitude}, '${escapeHtml(z.entity_id)}')">
+              + Add as Saved Location
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" title="Save and assign as Work location" onclick="window.rainBreakApp.importHaEntity('${escapeHtml(z.name)}', ${z.latitude}, ${z.longitude}, '${escapeHtml(z.entity_id)}', 'work')">
+              🏢 Set as Work
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" title="Save and assign as Home location" onclick="window.rainBreakApp.importHaEntity('${escapeHtml(z.name)}', ${z.latitude}, ${z.longitude}, '${escapeHtml(z.entity_id)}', 'home')">
+              🏠 Set as Home
+            </button>
           </div>
         </article>
       `
@@ -782,6 +813,9 @@
       lead_alert_minutes: 25,
       active_days: [0, 1, 2, 3, 4],
       location_override_id: '',
+      location_req_mode: 'any_location',
+      required_location_id: '',
+      destination_location_id: '',
       urgency_override: 'auto',
       notify_when_dry: false,
       enabled: true,
@@ -813,8 +847,11 @@
             <label for="brk-activity">Activity Type</label>
             <select id="brk-activity">
               <option value="walk" ${b.activity_type === 'walk' ? 'selected' : ''}>🚶 Walk</option>
-              <option value="bike" ${b.activity_type === 'bike' ? 'selected' : ''}>🚲 Bike Ride</option>
+              <option value="bike" ${b.activity_type === 'bike' ? 'selected' : ''}>🚲 Bike Ride / Exercise</option>
+              <option value="bike_commute" ${b.activity_type === 'bike_commute' ? 'selected' : ''}>🚲 Bike Commute (to/from work)</option>
               <option value="run" ${b.activity_type === 'run' ? 'selected' : ''}>🏃 Run</option>
+              <option value="dog_walk" ${b.activity_type === 'dog_walk' ? 'selected' : ''}>🐕 Dog Walk</option>
+              <option value="commute" ${b.activity_type === 'commute' ? 'selected' : ''}>🚗 Commute / Transit</option>
               <option value="break" ${b.activity_type === 'break' ? 'selected' : ''}>☕ Outdoor Break</option>
             </select>
           </div>
@@ -826,8 +863,26 @@
             <select id="brk-user">${userOpts}</select>
           </div>
           <div class="form-group">
-            <label for="brk-location">Location Scope</label>
+            <label for="brk-location">Forecast Location Scope</label>
             <select id="brk-location">${locOpts}</select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="brk-loc-req-mode">Location Geofence Condition</label>
+            <select id="brk-loc-req-mode">
+              <option value="any_location" ${(!b.location_req_mode || b.location_req_mode === 'any_location') ? 'selected' : ''}>Active Anywhere (No Geofence)</option>
+              <option value="only_at_location" ${b.location_req_mode === 'only_at_location' ? 'selected' : ''}>Only Active When AT Location (e.g. At Work)</option>
+              <option value="only_away_from_location" ${b.location_req_mode === 'only_away_from_location' ? 'selected' : ''}>Only Active When AWAY from Location (e.g. Away from Home)</option>
+            </select>
+          </div>
+          <div class="form-group" id="brk-req-loc-group" ${(!b.location_req_mode || b.location_req_mode === 'any_location') ? 'style="display:none;"' : ''}>
+            <label for="brk-req-loc">Geofence Reference Location</label>
+            <select id="brk-req-loc">
+              <option value="">-- Select Saved Location --</option>
+              ${state.locations.map((l) => `<option value="${escapeHtml(l.id)}" ${l.id === b.required_location_id ? 'selected' : ''}>${escapeHtml(l.name)}</option>`).join('')}
+            </select>
           </div>
         </div>
 
@@ -907,6 +962,14 @@
 
     openModal(isEdit ? 'Edit Break Window' : 'Add Break Window', html);
 
+    const reqModeSel = document.getElementById('brk-loc-req-mode');
+    const reqGroup = document.getElementById('brk-req-loc-group');
+    if (reqModeSel && reqGroup) {
+      reqModeSel.addEventListener('change', () => {
+        reqGroup.style.display = reqModeSel.value === 'any_location' ? 'none' : 'block';
+      });
+    }
+
     document.getElementById('modal-break-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
@@ -923,6 +986,9 @@
           lead_alert_minutes: Number(document.getElementById('brk-lead').value),
           active_days: days,
           location_override_id: document.getElementById('brk-location').value || null,
+          location_req_mode: document.getElementById('brk-loc-req-mode').value,
+          required_location_id: document.getElementById('brk-req-loc') ? (document.getElementById('brk-req-loc').value || null) : null,
+          destination_location_id: b.destination_location_id || null,
           urgency_override: document.getElementById('brk-urgency').value,
           notify_when_dry: document.getElementById('brk-notify-dry').checked,
           enabled: document.getElementById('brk-enabled').checked,
@@ -1242,9 +1308,18 @@
     const html = `
       <form id="modal-loc-form" class="form-grid">
         <div class="form-group">
+          <label for="loc-import-ha">⚡ 1-Click Import from Home Assistant</label>
+          <select id="loc-import-ha">
+            <option value="">-- Choose Discovered HA Zone or Person to Auto-Fill --</option>
+            ${(state.discovered.zones || []).map((z) => `<option value="zone" data-name="${escapeHtml(z.name)}" data-lat="${z.latitude}" data-lon="${z.longitude}" data-entity="${escapeHtml(z.entity_id)}">📍 Zone: ${escapeHtml(z.name)} (${z.latitude.toFixed(4)}, ${z.longitude.toFixed(4)})</option>`).join('')}
+            ${(state.discovered.persons || []).filter((p) => p.latitude !== null && p.longitude !== null).map((p) => `<option value="person" data-name="${escapeHtml(p.name)} Live GPS" data-lat="${p.latitude}" data-lon="${p.longitude}" data-entity="${escapeHtml(p.entity_id)}">👤 Person: ${escapeHtml(p.name)} (${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)})</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
           <label>Quick City Presets</label>
           <div class="checkboxes-wrap">${presetButtons}</div>
         </div>
+        <input type="hidden" id="loc-ha-entity" value="${escapeHtml(loc.ha_zone_entity || '')}" />
         <div class="form-group">
           <label for="loc-name">Location Name *</label>
           <input type="text" id="loc-name" value="${escapeHtml(loc.name)}" required placeholder="e.g. Work / Office" />
@@ -1274,6 +1349,19 @@
 
     openModal(isEdit ? 'Edit Saved Location' : 'Add Saved Location', html);
 
+    const haImportSel = document.getElementById('loc-import-ha');
+    if (haImportSel) {
+      haImportSel.addEventListener('change', () => {
+        const opt = haImportSel.selectedOptions[0];
+        if (opt && opt.getAttribute('data-name')) {
+          document.getElementById('loc-name').value = opt.getAttribute('data-name');
+          document.getElementById('loc-lat').value = opt.getAttribute('data-lat');
+          document.getElementById('loc-lon').value = opt.getAttribute('data-lon');
+          document.getElementById('loc-ha-entity').value = opt.getAttribute('data-entity') || '';
+        }
+      });
+    }
+
     document.querySelectorAll('.city-preset-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const nameInput = document.getElementById('loc-name');
@@ -1293,7 +1381,7 @@
           name: document.getElementById('loc-name').value.trim(),
           latitude: Number(document.getElementById('loc-lat').value),
           longitude: Number(document.getElementById('loc-lon').value),
-          ha_zone_entity: loc.ha_zone_entity || null,
+          ha_zone_entity: document.getElementById('loc-ha-entity').value.trim() || loc.ha_zone_entity || null,
           enabled: document.getElementById('loc-enabled').checked,
         };
         await apiPost('api/locations', payload);
@@ -1399,6 +1487,23 @@
         showBanner(`Delete error: ${err.message}`, 'error');
       }
     },
+    importHaEntity: async (name, lat, lon, entityId, role) => {
+      try {
+        const primaryUser = state.users.find((u) => u.enabled) || state.users[0];
+        await apiPost('api/locations/import-ha', {
+          name,
+          latitude: Number(lat),
+          longitude: Number(lon),
+          ha_zone_entity: entityId || null,
+          role: role || null,
+          user_id: primaryUser ? primaryUser.id : null,
+        });
+        await refreshAll(true);
+        showBanner(`Imported "${name}" from Home Assistant${role ? ` and configured as ${role}` : ''}!`, 'success');
+      } catch (err) {
+        showBanner(`Import error: ${err.message}`, 'error');
+      }
+    },
   };
 
   // --- Wire Event Listeners ---
@@ -1432,6 +1537,26 @@
   if (el.btnDashAddBreak) el.btnDashAddBreak.addEventListener('click', () => openBreakModal(null));
   if (el.btnAddUser) el.btnAddUser.addEventListener('click', () => openUserModal(null));
   if (el.btnAddLocation) el.btnAddLocation.addEventListener('click', () => openLocationModal(null));
+
+  if (el.btnPresetCommute) {
+    el.btnPresetCommute.addEventListener('click', async () => {
+      try {
+        const primaryUser = state.users.find((u) => u.enabled) || state.users[0];
+        if (!primaryUser) {
+          showBanner('Please create a user profile first.', 'warning');
+          return;
+        }
+        await apiPost('api/breaks/preset', {
+          user_id: primaryUser.id,
+          preset: 'commute_and_workday',
+        });
+        await refreshAll(true);
+        showBanner(`Loaded Commute & Workday Routine (08:00 Commute, 10:00 Walk, 12:30 Lunch, 15:00 Break, 17:00 Commute) for ${primaryUser.name}.`, 'success');
+      } catch (err) {
+        showBanner(`Preset error: ${err.message}`, 'error');
+      }
+    });
+  }
 
   if (el.btnPresetWorkday) {
     el.btnPresetWorkday.addEventListener('click', async () => {
