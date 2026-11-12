@@ -36,14 +36,14 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check Python syntax
-        run: python -m compileall -q baby_tracker home_stock ha_addons/src ha_full_mcp/src asgard_backup_inspector/app asgard_backup_inspector/tests asgard_notifyhub/app asgard_notifyhub/tests
+        run: python -m compileall -q baby_tracker home_stock ha_addons/src ha_full_mcp/src asgard_backup_inspector/app asgard_backup_inspector/tests asgard_notifyhub/app asgard_notifyhub/tests asgard_rain_break/app asgard_rain_break/tests
       - name: Validate add-on metadata
         run: |
           python -m pip install --disable-pip-version-check 'PyYAML>=6,<7'
           python - <<'PY'
           from pathlib import Path
           import yaml
-          for folder in ("ha_full_mcp", "ha_addons", "baby_tracker", "home_stock", "asgard_backup_inspector", "asgard_notifyhub"):
+          for folder in ("ha_full_mcp", "ha_addons", "baby_tracker", "home_stock", "asgard_backup_inspector", "asgard_notifyhub", "asgard_rain_break"):
               manifest = Path(folder) / "config.yaml"
               data = yaml.safe_load(manifest.read_text(encoding="utf-8"))
               for required in ("name", "version", "slug", "arch"):
@@ -51,6 +51,26 @@ jobs:
               assert (Path(folder) / "Dockerfile").exists(), f"{folder}: missing Dockerfile"
               print(f"{folder}: {data['name']} v{data['version']}")
           PY
+
+  asgard-rain-break-tests:
+    name: RainBreak tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: asgard_rain_break/requirements-dev.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r asgard_rain_break/requirements-dev.txt
+          python -m playwright install chromium
+      - name: Run Python and Playwright test suite
+        env:
+          PYTHONPATH: asgard_rain_break
+        run: python -m pytest asgard_rain_break/tests -v
 
   asgard-notifyhub-tests:
     name: NotifyHub tests
