@@ -147,6 +147,13 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
+.status-muted,
+.badge-muted {
+  background: rgba(148, 163, 184, 0.14);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -383,6 +390,12 @@ body {
   border-left: 4px solid var(--danger);
 }
 
+.eval-card.eval-paused {
+  border-left: 4px solid #64748b;
+  background: rgba(26, 38, 61, 0.65);
+  opacity: 0.88;
+}
+
 .eval-head {
   display: flex;
   justify-content: space-between;
@@ -482,6 +495,40 @@ body {
   background: var(--primary-soft);
   color: var(--primary);
   border-color: var(--primary);
+}
+
+.loc-pill.loc-pill-live {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(14, 165, 233, 0.12);
+  color: #7dd3fc;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.18);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.loc-pill.loc-pill-live.active {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(37, 99, 235, 0.35));
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+  display: inline-block;
+  animation: live-pulse 2s infinite ease-in-out;
+}
+
+@keyframes live-pulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
 }
 
 .forecast-summary-bar {

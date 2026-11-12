@@ -1,5 +1,6 @@
 """Smart Break Window Optimizer and Time/Urgency Policy Engine."""
 
+import math
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 from zoneinfo import ZoneInfo
@@ -9,13 +10,62 @@ from app.models import (
     BreakAdviceStatus,
     BreakEvaluation,
     BreakWindow,
+    DiscoveredPerson,
     LocationForecast,
+    LocationRequirementMode,
     RainPoint,
+    SavedLocation,
     ScheduleUrgencyMode,
     SlotCandidate,
     UrgencyLevel,
     UserProfile,
 )
+
+
+def haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate distance in meters between two coordinates using the Haversine formula."""
+    r = 6371000.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = (math.sin(delta_phi / 2.0) ** 2 +
+         math.cos(phi1) * math.cos(phi2) * (math.sin(delta_lambda / 2.0) ** 2))
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return r * c
+
+
+def is_user_at_location(
+    person: Optional[DiscoveredPerson],
+    target_location: SavedLocation,
+    radius_tolerance_m: float = 450.0,
+) -> Tuple[bool, str]:
+    """Check if person is currently at target_location via HA zone state or GPS proximity."""
+    if not person:
+        return True, "No HA person entity linked"
+
+    # 1. Zone state matching (e.g. state == 'work' or state == 'voka_colors')
+    if person.state and person.state not in ("not_home", "unknown", "unavailable"):
+        st = person.state.lower().replace(" ", "_")
+        zone_id = (target_location.ha_zone_entity or "").replace("zone.", "").lower().replace(" ", "_")
+        loc_name = target_location.name.lower().replace(" ", "_")
+        loc_id = target_location.id.lower().replace("loc_", "")
+        if st in (zone_id, loc_name, loc_id) or zone_id in st or loc_name in st:
+            return True, f"Detected in Home Assistant zone '{person.state}'"
+
+    # 2. GPS proximity matching
+    if person.latitude is not None and person.longitude is not None:
+        dist = haversine_distance_m(
+            person.latitude, person.longitude, target_location.latitude, target_location.longitude
+        )
+        if dist <= radius_tolerance_m:
+            return True, f"GPS proximity: {int(dist)}m from {target_location.name}"
+        return False, f"GPS distance: {int(dist)}m away from {target_location.name}"
+
+    if person.state == "home" and "home" in target_location.name.lower():
+        return True, "Person state is 'home'"
+
+    return False, f"Person state is '{person.state}' (not at {target_location.name})"
 
 
 def parse_hhmm(hhmm: str) -> int:
@@ -153,10 +203,12 @@ def evaluate_break_window(
     rain_threshold_mm: float = 0.15,
     location_source: str = "fixed",
     now_local: Optional[datetime] = None,
+    current_person: Optional[DiscoveredPerson] = None,
+    required_location: Optional[SavedLocation] = None,
 ) -> BreakEvaluation:
     """
     Evaluate a BreakWindow against a LocationForecast and compute the optimal dry/cleanest slot
-    before, during, or after the scheduled break.
+    before, during, or after the scheduled break, respecting location requirements/geofences.
     """
     try:
         tz = ZoneInfo(user.timezone or "Europe/Amsterdam")
@@ -165,11 +217,20 @@ def evaluate_break_window(
 
     dt_now = now_local.astimezone(tz) if now_local else datetime.now(tz)
 
+    activity_label = {
+        ActivityType.WALK: "walk",
+        ActivityType.BIKE: "bike ride",
+        ActivityType.BIKE_COMMUTE: "bike commute",
+        ActivityType.RUN: "run",
+        ActivityType.DOG_WALK: "dog walk",
+        ActivityType.BREAK: "outdoor break",
+        ActivityType.COMMUTE: "commute",
+    }.get(brk.activity_type, "activity")
+
     # Build lookup map from minute-of-day -> mm/h
     mm_by_min: dict = {}
     for pt in forecast.points:
         m = parse_hhmm(pt.time_label)
-        # Keep the nearest/today point for that HH:MM
         if m not in mm_by_min or abs(pt.minutes_from_now) < 360:
             mm_by_min[m] = pt.mm_per_hour
 
@@ -204,12 +265,46 @@ def evaluate_break_window(
         urgency_override=brk.urgency_override,
     )
 
-    activity_label = {
-        ActivityType.WALK: "walk",
-        ActivityType.BIKE: "bike ride",
-        ActivityType.RUN: "run",
-        ActivityType.BREAK: "break",
-    }.get(brk.activity_type, "break")
+    # --- Geofence / Location Requirement Check ---
+    if brk.location_req_mode == LocationRequirementMode.ONLY_AT_LOCATION and required_location:
+        at_loc, at_loc_detail = is_user_at_location(current_person, required_location)
+        if not at_loc:
+            status = BreakAdviceStatus.PAUSED_WRONG_LOCATION
+            headline = f"Paused: Only active around {required_location.name}"
+            curr_state = current_person.state if current_person and current_person.state else "away"
+            advice = (
+                f"This {activity_label} is configured to only activate when {user.name} is at {required_location.name}. "
+                f"Current location state is '{curr_state}' ({at_loc_detail}). Alerts are paused."
+            )
+            return BreakEvaluation(
+                break_id=brk.id,
+                break_name=brk.name,
+                user_id=user.id,
+                user_name=user.name,
+                activity_type=brk.activity_type,
+                location_id=forecast.location_id,
+                location_name=forecast.location_name,
+                location_source=location_source,
+                latitude=forecast.latitude,
+                longitude=forecast.longitude,
+                planned_start=planned_slot.start_time,
+                planned_end=planned_slot.end_time,
+                duration_minutes=duration,
+                flex_before_minutes=brk.flex_before_minutes,
+                flex_after_minutes=brk.flex_after_minutes,
+                status=status,
+                effective_urgency=eff_urgency,
+                schedule_allowed=False,
+                schedule_reason=f"User is not at required location '{required_location.name}' ({at_loc_detail})",
+                should_notify=False,
+                headline=headline,
+                advice_text=advice,
+                planned_slot=planned_slot,
+                recommended_slot=planned_slot,
+                all_candidates=candidates,
+            )
+
+    is_commute = brk.activity_type in (ActivityType.BIKE_COMMUTE, ActivityType.COMMUTE)
 
     if planned_slot.is_dry:
         # Check if rain starts within 15 minutes right after planned_end
@@ -243,20 +338,36 @@ def evaluate_break_window(
             shift_abs = abs(recommended.shift_minutes)
             if recommended.shift_minutes < 0:
                 status = BreakAdviceStatus.SHIFT_EARLIER_DRY
-                headline = f"Go {shift_abs} min earlier! {recommended.start_time}–{recommended.end_time} is dry"
-                advice = (
-                    f"Rain expected during your {planned_slot.start_time}–{planned_slot.end_time} {activity_label} "
-                    f"at {forecast.location_name} (peak {planned_slot.max_mm_h:.1f} mm/h). "
-                    f"Leave {shift_abs} min earlier ({recommended.start_time}–{recommended.end_time}) for a completely dry window!"
-                )
+                if is_commute:
+                    headline = f"🚲 Depart {shift_abs} min earlier! {recommended.start_time}–{recommended.end_time} is dry"
+                    advice = (
+                        f"Rain is forecasted during your planned {planned_slot.start_time}–{planned_slot.end_time} {activity_label} "
+                        f"at {forecast.location_name} (peak {planned_slot.max_mm_h:.1f} mm/h). "
+                        f"Leave {shift_abs} min earlier ({recommended.start_time}–{recommended.end_time}) for a dry ride, or consider alternative transport!"
+                    )
+                else:
+                    headline = f"Go {shift_abs} min earlier! {recommended.start_time}–{recommended.end_time} is dry"
+                    advice = (
+                        f"Rain expected during your {planned_slot.start_time}–{planned_slot.end_time} {activity_label} "
+                        f"at {forecast.location_name} (peak {planned_slot.max_mm_h:.1f} mm/h). "
+                        f"Leave {shift_abs} min earlier ({recommended.start_time}–{recommended.end_time}) for a completely dry window!"
+                    )
             else:
                 status = BreakAdviceStatus.SHIFT_LATER_DRY
-                headline = f"Wait {shift_abs} min! {recommended.start_time}–{recommended.end_time} is dry"
-                advice = (
-                    f"Rain expected during your {planned_slot.start_time}–{planned_slot.end_time} {activity_label} "
-                    f"at {forecast.location_name} (peak {planned_slot.max_mm_h:.1f} mm/h). "
-                    f"Shift {shift_abs} min later ({recommended.start_time}–{recommended.end_time}) for a dry window!"
-                )
+                if is_commute:
+                    headline = f"🚲 Wait {shift_abs} min to depart! {recommended.start_time}–{recommended.end_time} is dry"
+                    advice = (
+                        f"Rain is forecasted during your planned {planned_slot.start_time}–{planned_slot.end_time} {activity_label} "
+                        f"at {forecast.location_name} (peak {planned_slot.max_mm_h:.1f} mm/h). "
+                        f"Depart {shift_abs} min later ({recommended.start_time}–{recommended.end_time}) for a dry ride!"
+                    )
+                else:
+                    headline = f"Wait {shift_abs} min! {recommended.start_time}–{recommended.end_time} is dry"
+                    advice = (
+                        f"Rain expected during your {planned_slot.start_time}–{planned_slot.end_time} {activity_label} "
+                        f"at {forecast.location_name} (peak {planned_slot.max_mm_h:.1f} mm/h). "
+                        f"Shift {shift_abs} min later ({recommended.start_time}–{recommended.end_time}) for a dry window!"
+                    )
             should_notify = schedule_allowed
         else:
             # No completely dry slot; look for the cleanest slot
@@ -278,12 +389,20 @@ def evaluate_break_window(
             else:
                 status = BreakAdviceStatus.HEAVY_RAIN_NO_WINDOW
                 recommended = planned_slot
-                headline = f"Continuous rain across { format_hhmm(earliest_start) }–{ format_hhmm(latest_start + duration) }"
-                advice = (
-                    f"Persistent rain expected at {forecast.location_name} before, during, and after your "
-                    f"{planned_slot.start_time}–{planned_slot.end_time} {activity_label} (peak {planned_slot.max_mm_h:.1f} mm/h). "
-                    f"Bring rain gear or reschedule outside this window."
-                )
+                if is_commute:
+                    headline = f"🌧️ Continuous rain during commute ({planned_slot.max_mm_h:.1f} mm/h) — consider car/train"
+                    advice = (
+                        f"Persistent rain expected during your planned {planned_slot.start_time}–{planned_slot.end_time} "
+                        f"{activity_label} at {forecast.location_name} (peak {planned_slot.max_mm_h:.1f} mm/h). "
+                        f"No dry window found. Rain gear advised, or switch to car/public transit today."
+                    )
+                else:
+                    headline = f"Continuous rain across { format_hhmm(earliest_start) }–{ format_hhmm(latest_start + duration) }"
+                    advice = (
+                        f"Persistent rain expected at {forecast.location_name} before, during, and after your "
+                        f"{planned_slot.start_time}–{planned_slot.end_time} {activity_label} (peak {planned_slot.max_mm_h:.1f} mm/h). "
+                        f"Bring rain gear or reschedule outside this window."
+                    )
             should_notify = schedule_allowed
 
     return BreakEvaluation(

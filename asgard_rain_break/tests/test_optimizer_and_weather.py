@@ -252,3 +252,192 @@ def test_notify_action_allowlist():
     assert is_allowed_notify_action("notify.send_message") is False
     assert is_allowed_notify_action("persistent_notification.dismiss") is False
     assert is_allowed_notify_action("persistent_notification.dismiss_all") is False
+
+
+def test_haversine_distance_and_is_user_at_location():
+    from app.optimizer import haversine_distance_m, is_user_at_location
+    from app.models import LocationRequirementMode
+
+    # Amsterdam Central to Dam Square ~750m
+    d = haversine_distance_m(52.3791, 4.9003, 52.3731, 4.8926)
+    assert 700 <= d <= 850
+
+    work_loc = SavedLocation(
+        id="loc_work",
+        name="Voka Colors",
+        latitude=52.4871,
+        longitude=6.1366,
+        ha_zone_entity="zone.voka_colors",
+    )
+
+    # 1. Person state matches zone name/slug
+    person_at_work = DiscoveredPerson(
+        entity_id="person.martijn",
+        name="Martijn",
+        state="voka_colors",
+        latitude=52.4870,
+        longitude=6.1365,
+    )
+    is_at, _ = is_user_at_location(person_at_work, work_loc)
+    assert is_at is True
+
+    # 2. Person at home (different state & 20km away)
+    person_at_home = DiscoveredPerson(
+        entity_id="person.martijn",
+        name="Martijn",
+        state="home",
+        latitude=52.3676,
+        longitude=4.9041,
+    )
+    is_at, _ = is_user_at_location(person_at_home, work_loc)
+    assert is_at is False
+
+    # 3. Person state is "not_home" but GPS is 50m from work
+    person_near_work = DiscoveredPerson(
+        entity_id="person.martijn",
+        name="Martijn",
+        state="not_home",
+        latitude=52.4872,
+        longitude=6.1367,
+    )
+    is_at, _ = is_user_at_location(person_near_work, work_loc)
+    assert is_at is True
+
+
+def test_break_optimizer_geofence_pauses_when_user_away():
+    from app.models import LocationRequirementMode
+
+    tz = ZoneInfo("Europe/Amsterdam")
+    now_dt = datetime(2026, 11, 12, 10, 0, tzinfo=tz)
+
+    user = UserProfile(
+        id="usr_primary",
+        name="Martijn",
+        ha_person_entity="person.martijn",
+        default_urgency=UrgencyLevel.URGENT,
+        timezone="Europe/Amsterdam",
+    )
+
+    work_loc = SavedLocation(
+        id="loc_work",
+        name="Voka Colors",
+        latitude=52.4871,
+        longitude=6.1366,
+        ha_zone_entity="zone.voka_colors",
+    )
+
+    brk = BreakWindow(
+        id="brk_work_1000",
+        user_id="usr_primary",
+        name="Morning Break Walk (10:00)",
+        activity_type=ActivityType.WALK,
+        start_time="10:00",
+        duration_minutes=15,
+        location_req_mode=LocationRequirementMode.ONLY_AT_LOCATION,
+        required_location_id="loc_work",
+        active_days=[0, 1, 2, 3, 4],
+        enabled=True,
+    )
+
+    pts = [RainPoint(time_label="10:00", timestamp_iso=now_dt.isoformat(), mm_per_hour=0.0, minutes_from_now=0)]
+    fc = LocationForecast(
+        location_id="loc_work",
+        location_name="Voka Colors",
+        latitude=52.4871,
+        longitude=6.1366,
+        summary_text="Dry",
+        source_used="buienradar",
+        fetched_at=now_dt.isoformat(),
+        is_currently_raining=False,
+        current_mm_h=0.0,
+        points=pts,
+    )
+
+    # Case A: User is at home -> Break is PAUSED because required location is Work
+    person_home = DiscoveredPerson(
+        entity_id="person.martijn",
+        name="Martijn",
+        state="home",
+        latitude=52.3676,
+        longitude=4.9041,
+    )
+    ev_away = evaluate_break_window(
+        brk=brk,
+        user=user,
+        forecast=fc,
+        now_local=now_dt,
+        current_person=person_home,
+        required_location=work_loc,
+    )
+    assert ev_away.status == BreakAdviceStatus.PAUSED_WRONG_LOCATION
+    assert ev_away.should_notify is False
+    assert "Only active around Voka Colors" in ev_away.headline
+
+    # Case B: User is at work -> Break is evaluated normally
+    person_work = DiscoveredPerson(
+        entity_id="person.martijn",
+        name="Martijn",
+        state="voka_colors",
+        latitude=52.4871,
+        longitude=6.1366,
+    )
+    ev_at_work = evaluate_break_window(
+        brk=brk,
+        user=user,
+        forecast=fc,
+        now_local=now_dt,
+        current_person=person_work,
+        required_location=work_loc,
+    )
+    assert ev_at_work.status == BreakAdviceStatus.DRY_ON_SCHEDULE
+
+
+def test_commute_specific_bike_advice():
+    tz = ZoneInfo("Europe/Amsterdam")
+    now_dt = datetime(2026, 11, 12, 7, 50, tzinfo=tz)
+
+    user = UserProfile(
+        id="usr_primary",
+        name="Martijn",
+        default_urgency=UrgencyLevel.URGENT,
+        timezone="Europe/Amsterdam",
+    )
+
+    brk = BreakWindow(
+        id="brk_commute",
+        user_id="usr_primary",
+        name="Morning Bike Commute to Work",
+        activity_type=ActivityType.BIKE_COMMUTE,
+        start_time="08:00",
+        duration_minutes=30,
+        flex_before_minutes=30,
+        flex_after_minutes=30,
+        active_days=[0, 1, 2, 3, 4],
+        enabled=True,
+    )
+
+    # 07:30-08:00 dry, 08:00-08:30 raining 3.0 mm/h
+    pts = []
+    for m in range(-30, 95, 5):
+        t_dt = datetime(2026, 11, 12, 8, 0, tzinfo=tz).timestamp() + (m * 60)
+        dt_val = datetime.fromtimestamp(t_dt, tz=tz)
+        mm = 3.0 if 0 <= m <= 30 else 0.0
+        pts.append(RainPoint(time_label=dt_val.strftime("%H:%M"), timestamp_iso=dt_val.isoformat(), mm_per_hour=mm, minutes_from_now=m))
+
+    fc = LocationForecast(
+        location_id="loc_commute",
+        location_name="Commute Route",
+        latitude=52.4871,
+        longitude=6.1366,
+        summary_text="Rain during 08:00 commute",
+        source_used="buienradar",
+        fetched_at=now_dt.isoformat(),
+        is_currently_raining=False,
+        current_mm_h=0.0,
+        points=pts,
+    )
+
+    ev = evaluate_break_window(brk=brk, user=user, forecast=fc, now_local=now_dt)
+    assert ev.status == BreakAdviceStatus.SHIFT_EARLIER_DRY
+    assert "🚲 Depart" in ev.headline
+    assert "for a dry ride" in ev.advice_text

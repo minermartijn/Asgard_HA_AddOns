@@ -1,6 +1,6 @@
 name: ASGARD RainBreak
 slug: asgard_rain_break
-version: "0.1.0"
+version: "0.2.0"
 description: "Smart rain radar alerts, break & walk window optimizer, multi-location tracking, and Home Assistant / Pushover notifications"
 url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_rain_break"
 stage: experimental

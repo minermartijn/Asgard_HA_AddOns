@@ -25,7 +25,7 @@ def test_health_and_overview_defaults(tmp_path: Path):
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "ok"
-        assert data["version"] == "0.1.0"
+        assert data["version"] == "0.2.0"
         assert data["default_timezone"] == "Europe/Amsterdam"
 
         ov = client.get("/api/overview").json()
@@ -111,3 +111,52 @@ def test_ingress_header_injection_and_guard(tmp_path: Path):
         r_ok = client.get("/", headers=headers)
         assert r_ok.status_code == 200
         assert '<base href="/api/hassio_ingress/rain_token_123/" />' in r_ok.text
+
+
+def test_import_ha_location_endpoint(tmp_path: Path):
+    with make_client(tmp_path) as client:
+        # Import a discovered HA zone and set as work
+        res = client.post(
+            "/api/locations/import-ha",
+            json={
+                "name": "Voka Colors HQ",
+                "latitude": 52.4871,
+                "longitude": 6.1366,
+                "ha_zone_entity": "zone.voka_colors",
+                "role": "work",
+                "user_id": "usr_primary",
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["name"] == "Voka Colors HQ"
+        assert data["ha_zone_entity"] == "zone.voka_colors"
+        assert data["latitude"] == 52.4871
+
+        # Verify user profile fixed_location_id was updated to this new location
+        u = client.get("/api/users").json()["users"][0]
+        assert u["fixed_location_id"] == data["id"]
+        assert data["id"] in u["watched_location_ids"]
+
+
+def test_commute_and_workday_preset_and_live_forecast_order(tmp_path: Path):
+    with make_client(tmp_path) as client:
+        # Apply commute_and_workday preset
+        res = client.post(
+            "/api/breaks/preset",
+            json={"user_id": "usr_primary", "preset": "commute_and_workday"},
+        )
+        assert res.status_code == 200
+        breaks = res.json()["created"]
+        assert len(breaks) == 5
+        starts = [b["start_time"] for b in breaks]
+        assert starts == ["08:00", "10:00", "12:30", "15:00", "17:00"]
+        types = [b["activity_type"] for b in breaks]
+        assert types[0] == "bike_commute"
+        assert types[4] == "bike_commute"
+
+        # Check overview forecasts ordering: Live location of active user should be FIRST
+        ov = client.get("/api/overview").json()
+        forecasts = ov["forecasts"]
+        assert len(forecasts) >= 1
+        assert forecasts[0]["location_id"].startswith("live_")

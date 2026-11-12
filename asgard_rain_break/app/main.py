@@ -28,6 +28,7 @@ from app.models import (
     DiscoveredZone,
     LocationForecast,
     LocationMode,
+    LocationRequirementMode,
     SavedLocation,
     ScheduleUrgencyMode,
     UrgencyLevel,
@@ -75,6 +76,15 @@ def validate_iana_timezone(tz_name: str) -> str:
 
 class TogglePayload(BaseModel):
     enabled: bool
+
+
+class ImportHaLocationPayload(BaseModel):
+    name: str
+    latitude: float
+    longitude: float
+    ha_zone_entity: Optional[str] = None
+    role: Optional[str] = None  # "work", "home", or None
+    user_id: Optional[str] = None
 
 
 class PresetBreaksPayload(BaseModel):
@@ -148,25 +158,10 @@ def create_app(custom_settings: Optional[Settings] = None) -> FastAPI:
         forecasts_by_key: Dict[str, LocationForecast] = {}
         ordered_forecasts: List[LocationForecast] = []
 
-        # 1. Forecasts for all enabled saved locations
-        for loc in locs:
-            if not loc.enabled:
-                continue
-            fc = await weather_service.get_forecast(
-                location_id=loc.id,
-                location_name=loc.name,
-                latitude=loc.latitude,
-                longitude=loc.longitude,
-                provider_mode=cfg.weather_provider,
-                rain_threshold_mm=cfg.rain_threshold_mm,
-                tz_name=cfg.default_timezone,
-                force_refresh=force_refresh,
-            )
-            forecasts_by_key[loc.id] = fc
-            ordered_forecasts.append(fc)
-
-        # 2. Forecasts for users using live_person location mode
+        # 1. Forecasts for active users using live_person location mode (Placed FIRST in ordered list)
         for usr in users:
+            if not usr.enabled:
+                continue
             resolved = resolve_user_target_locations(usr, locs, persons)
             for lid, lname, lat, lon, src in resolved:
                 if lid not in forecasts_by_key:
@@ -183,8 +178,27 @@ def create_app(custom_settings: Optional[Settings] = None) -> FastAPI:
                     forecasts_by_key[lid] = fc
                     ordered_forecasts.append(fc)
 
-        # 3. Evaluate all break windows
+        # 2. Forecasts for all enabled saved locations
+        for loc in locs:
+            if not loc.enabled:
+                continue
+            if loc.id not in forecasts_by_key:
+                fc = await weather_service.get_forecast(
+                    location_id=loc.id,
+                    location_name=loc.name,
+                    latitude=loc.latitude,
+                    longitude=loc.longitude,
+                    provider_mode=cfg.weather_provider,
+                    rain_threshold_mm=cfg.rain_threshold_mm,
+                    tz_name=cfg.default_timezone,
+                    force_refresh=force_refresh,
+                )
+                forecasts_by_key[loc.id] = fc
+                ordered_forecasts.append(fc)
+
+        # 3. Evaluate all break windows (with location geofence checking)
         user_by_id = {u.id: u for u in users}
+        loc_by_id = {l.id: l for l in locs}
         evaluations: List[BreakEvaluation] = []
         for brk in breaks:
             usr = user_by_id.get(brk.user_id) or (users[0] if users else None)
@@ -212,12 +226,17 @@ def create_app(custom_settings: Optional[Settings] = None) -> FastAPI:
                 forecasts_by_key[lid] = fc
                 ordered_forecasts.append(fc)
 
+            person_obj = next((p for p in persons if p.entity_id == usr.ha_person_entity), None)
+            req_loc = loc_by_id.get(brk.required_location_id) if brk.required_location_id else None
+
             ev = evaluate_break_window(
                 brk=brk,
                 user=usr,
                 forecast=fc,
                 rain_threshold_mm=cfg.rain_threshold_mm,
                 location_source=src,
+                current_person=person_obj,
+                required_location=req_loc,
             )
             evaluations.append(ev)
 
@@ -475,6 +494,45 @@ def create_app(custom_settings: Optional[Settings] = None) -> FastAPI:
         saved = storage.save_location(loc)
         return saved.model_dump()
 
+    @app.post("/api/locations/import-ha")
+    async def import_ha_location_endpoint(payload: ImportHaLocationPayload):
+        clean_name = payload.name.strip()
+        if not clean_name:
+            raise HTTPException(status_code=400, detail="Location name cannot be empty.")
+
+        slug = (
+            payload.ha_zone_entity.replace("zone.", "loc_").replace("person.", "loc_")
+            if payload.ha_zone_entity
+            else f"loc_{uuid.uuid4().hex[:8]}"
+        )
+
+        loc = SavedLocation(
+            id=slug,
+            name=clean_name,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            ha_zone_entity=payload.ha_zone_entity,
+            enabled=True,
+        )
+        saved = storage.save_location(loc)
+
+        # If user specified role == "work" or "home", update user profile
+        if payload.user_id:
+            usr = storage.get_user(payload.user_id)
+            if usr:
+                if payload.role == "work":
+                    usr.fixed_location_id = saved.id
+                    if saved.id not in usr.watched_location_ids:
+                        usr.watched_location_ids.append(saved.id)
+                    storage.save_user(usr)
+                elif payload.role == "home":
+                    usr.fallback_location_id = saved.id
+                    if saved.id not in usr.watched_location_ids:
+                        usr.watched_location_ids.append(saved.id)
+                    storage.save_user(usr)
+
+        return saved.model_dump()
+
     @app.delete("/api/locations/{loc_id}")
     async def delete_location_endpoint(loc_id: str):
         deleted = storage.delete_location(loc_id)
@@ -542,23 +600,33 @@ def create_app(custom_settings: Optional[Settings] = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=f"User '{payload.user_id}' does not exist.")
 
         created: List[BreakWindow] = []
+        work_loc_id = usr.fixed_location_id or "loc_work"
+
         if payload.preset == "workday_3_breaks":
             templates = [
-                ("Morning Break Walk (10:00)", ActivityType.WALK, "10:00", 15, 30, 30),
-                ("Lunch Walk / Bike Ride (12:30)", ActivityType.WALK, "12:30", 30, 30, 30),
-                ("Afternoon Break Walk (15:00)", ActivityType.WALK, "15:00", 15, 30, 30),
+                ("Morning Break Walk (10:00)", ActivityType.WALK, "10:00", 15, 30, 30, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
+                ("Lunch Walk / Bike Ride (12:30)", ActivityType.WALK, "12:30", 30, 30, 30, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
+                ("Afternoon Break Walk (15:00)", ActivityType.WALK, "15:00", 15, 30, 30, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
+            ]
+        elif payload.preset == "commute_and_workday":
+            templates = [
+                ("Morning Bike Ride to Work (08:00)", ActivityType.BIKE_COMMUTE, "08:00", 30, 20, 20, LocationRequirementMode.ANY_LOCATION, None),
+                ("Morning Break Walk (10:00)", ActivityType.WALK, "10:00", 15, 30, 30, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
+                ("Lunch Walk / Bike Ride (12:30)", ActivityType.WALK, "12:30", 30, 30, 30, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
+                ("Afternoon Break Walk (15:00)", ActivityType.WALK, "15:00", 15, 30, 30, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
+                ("Evening Bike Ride Home (17:00)", ActivityType.BIKE_COMMUTE, "17:00", 30, 20, 20, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
             ]
         elif payload.preset == "commute_bike":
             templates = [
-                ("Morning Bike Commute (08:15)", ActivityType.BIKE, "08:15", 30, 30, 30),
-                ("Evening Bike Commute (17:15)", ActivityType.BIKE, "17:15", 30, 30, 30),
+                ("Morning Bike Commute (08:15)", ActivityType.BIKE_COMMUTE, "08:15", 30, 30, 30, LocationRequirementMode.ANY_LOCATION, None),
+                ("Evening Bike Commute (17:15)", ActivityType.BIKE_COMMUTE, "17:15", 30, 30, 30, LocationRequirementMode.ONLY_AT_LOCATION, work_loc_id),
             ]
         else:
             templates = [
-                ("Lunch Walk (12:30)", ActivityType.WALK, "12:30", 30, 30, 30),
+                ("Lunch Walk (12:30)", ActivityType.WALK, "12:30", 30, 30, 30, LocationRequirementMode.ANY_LOCATION, None),
             ]
 
-        for name, act, st, dur, fb, fa in templates:
+        for name, act, st, dur, fb, fa, req_mode, req_loc in templates:
             b = BreakWindow(
                 id=f"brk_{usr.id}_{st.replace(':', '')}",
                 user_id=usr.id,
@@ -568,8 +636,10 @@ def create_app(custom_settings: Optional[Settings] = None) -> FastAPI:
                 duration_minutes=dur,
                 flex_before_minutes=fb,
                 flex_after_minutes=fa,
-                lead_alert_minutes=25,
+                lead_alert_minutes=25 if "Commute" not in name else 20,
                 active_days=[0, 1, 2, 3, 4],
+                location_req_mode=req_mode,
+                required_location_id=req_loc,
                 urgency_override=UrgencyLevel.AUTO,
                 notify_when_dry=False,
                 enabled=True,
