@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASGARD RainBreak — Smart Rain Radar &amp; Break Window Advisor</title>
+  <link rel="stylesheet" href="static/app.css?v=0.1.0" />
+</head>
+<body>
+  <div class="layout">
+    <!-- Top Header -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">&#9748;</div>
+        <div class="brand-text">
+          <h1>ASGARD RainBreak</h1>
+          <p class="subtitle">Multi-location rain radar, smart walk/bike break advisor &amp; HA / Pushover alerts</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="ha-status-badge" class="status-pill status-checking">Checking HA&hellip;</span>
+        <button id="btn-sync-ha" class="btn btn-secondary" type="button" title="Discover Home Assistant persons, zones, and notify services">
+          &#8635; Sync HA
+        </button>
+        <button id="btn-refresh-now" class="btn btn-primary" type="button" title="Refresh weather radar and re-evaluate all break windows">
+          &#9889; Refresh Radar
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist" aria-label="RainBreak Sections">
+      <button class="tab-btn active" data-tab="tab-dashboard" role="tab" aria-selected="true" type="button">
+        Radar &amp; Break Advisor
+      </button>
+      <button class="tab-btn" data-tab="tab-breaks" role="tab" aria-selected="false" type="button">
+        Break Windows
+      </button>
+      <button class="tab-btn" data-tab="tab-users" role="tab" aria-selected="false" type="button">
+        Users &amp; Channels
+      </button>
+      <button class="tab-btn" data-tab="tab-locations" role="tab" aria-selected="false" type="button">
+        Locations &amp; Zones
+      </button>
+      <button class="tab-btn" data-tab="tab-settings" role="tab" aria-selected="false" type="button">
+        Settings &amp; Audit Log
+      </button>
+    </nav>
+
+    <!-- Global Status Banner -->
+    <div id="status-banner" class="banner" role="status" aria-live="polite" hidden></div>
+
+    <!-- TAB 1: RADAR & BREAK ADVISOR -->
+    <section id="tab-dashboard" class="tab-pane active" role="tabpanel">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">ACTIVE USERS</span>
+            <span id="stat-users-badge" class="badge badge-info">0 Active</span>
+          </div>
+          <div id="stat-users-value" class="stat-value">0 / 0</div>
+          <div id="stat-users-hint" class="stat-hint">Per-user monitoring &amp; location mode</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">LIVE RADAR STATUS</span>
+            <span id="stat-radar-badge" class="badge badge-success">Dry</span>
+          </div>
+          <div id="stat-radar-value" class="stat-value">0.0 mm/h</div>
+          <div id="stat-radar-hint" class="stat-hint">Checking watched locations&hellip;</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">SMART BREAK ADVISOR</span>
+            <span id="stat-breaks-badge" class="badge badge-info">0 Breaks</span>
+          </div>
+          <div id="stat-breaks-value" class="stat-value">Ready</div>
+          <div id="stat-breaks-hint" class="stat-hint">Evaluates before, during &amp; after breaks</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">NOTIFICATION CHANNELS</span>
+            <span id="stat-channels-badge" class="badge badge-info">HA + Pushover</span>
+          </div>
+          <div id="stat-channels-value" class="stat-value">0 Routes</div>
+          <div id="stat-channels-hint" class="stat-hint">HA Notify &amp; Pushover API ready</div>
+        </div>
+      </div>
+
+      <!-- Smart Break Window Advisor Section -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Smart Walk &amp; Bike Break Advisor</h2>
+            <p class="hint">
+              Automatically checks precipitation before, during, and after each scheduled break to recommend whether to leave earlier, on time, or slightly later.
+            </p>
+          </div>
+          <div class="panel-actions">
+            <button id="btn-dash-add-break" class="btn btn-secondary" type="button">+ Add Break Window</button>
+            <button id="btn-evaluate-all" class="btn btn-primary" type="button">&#9654; Check &amp; Send Due Alerts</button>
+          </div>
+        </div>
+        <div id="dashboard-break-evaluations" class="evaluations-grid">
+          <div class="empty-state">Evaluating scheduled break windows&hellip;</div>
+        </div>
+      </div>
+
+      <!-- Multi-Location Rain Radar Timeline -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>High-Resolution Precipitation Timeline</h2>
+            <p class="hint">
+              5-minute rain intensity (mm/h) and probability across your active live user locations and saved presets.
+            </p>
+          </div>
+          <div id="forecast-location-pills" class="location-pills" role="tablist" aria-label="Select Forecast Location"></div>
+        </div>
+        <div id="forecast-summary-bar" class="forecast-summary-bar">
+          Select a location to inspect its precipitation timeline.
+        </div>
+        <div id="forecast-timeline-container" class="timeline-chart-wrap">
+          <div class="empty-state">Loading precipitation timeline&hellip;</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: BREAK WINDOWS -->
+    <section id="tab-breaks" class="tab-pane" role="tabpanel" hidden>
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Scheduled Break &amp; Activity Windows</h2>
+            <p class="hint">
+              Configure your daily walk, bike, or coffee breaks (e.g. 10:00 for 15 min, 12:30 for 30 min, 15:00 for 15 min) and how many minutes earlier or later you can shift if rain is forecasted.
+            </p>
+          </div>
+          <div class="panel-actions">
+            <button id="btn-preset-workday" class="btn btn-secondary" type="button" title="Create 10:00 (15m), 12:30 (30m), and 15:00 (15m) workday breaks">
+              &#9889; Load Workday Preset (10:00 · 12:30 · 15:00)
+            </button>
+            <button id="btn-add-break" class="btn btn-primary" type="button">+ Add Break Window</button>
+          </div>
+        </div>
+        <div id="breaks-list" class="cards-grid">
+          <div class="empty-state">No break windows configured yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: USERS, CHANNELS & SCHEDULE -->
+    <section id="tab-users" class="tab-pane" role="tabpanel" hidden>
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Household Users, Location Tracking &amp; Notification Channels</h2>
+            <p class="hint">
+              Enable or pause monitoring per user, choose between Auto Live HA User Location or Preset Locations, configure Urgent vs. Neutral time windows, and connect Home Assistant Notify and Pushover.
+            </p>
+          </div>
+          <div class="panel-actions">
+            <button id="btn-users-sync-ha" class="btn btn-secondary" type="button">&#8635; Sync from Home Assistant</button>
+            <button id="btn-add-user" class="btn btn-primary" type="button">+ Add User Profile</button>
+          </div>
+        </div>
+        <div id="users-list" class="cards-grid">
+          <div class="empty-state">Loading user profiles&hellip;</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: LOCATIONS & ZONES -->
+    <section id="tab-locations" class="tab-pane" role="tabpanel" hidden>
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Saved Locations &amp; Home Assistant Zones</h2>
+            <p class="hint">
+              Define fixed locations (such as Home, Work / Office, or a cycling route) or import zones directly from Home Assistant. Users can either track their live HA GPS location or select any of these presets.
+            </p>
+          </div>
+          <div class="panel-actions">
+            <button id="btn-add-location" class="btn btn-primary" type="button">+ Add Location</button>
+          </div>
+        </div>
+        <div id="locations-list" class="cards-grid">
+          <div class="empty-state">Loading saved locations&hellip;</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Discovered Home Assistant Entities (Persons &amp; Zones)</h3>
+            <p class="hint">Live coordinates reported by Home Assistant Core for automatic user tracking and zone import.</p>
+          </div>
+        </div>
+        <div id="discovered-ha-entities" class="cards-grid">
+          <div class="empty-state">No Home Assistant entities discovered yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: SETTINGS, SIMULATOR & AUDIT LOG -->
+    <section id="tab-settings" class="tab-pane" role="tabpanel" hidden>
+      <div class="two-col-grid">
+        <!-- Global App Configuration & Pushover Token -->
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Global Radar &amp; Pushover Settings</h2>
+              <p class="hint">Configure weather source, rain sensitivity, default timezone, and shared Pushover Application API token.</p>
+            </div>
+          </div>
+          <form id="config-form" class="form-grid">
+            <div class="form-group">
+              <label for="cfg-weather-provider">Weather Forecast Provider</label>
+              <select id="cfg-weather-provider">
+                <option value="auto">Auto (Buienradar 5-min Radar in NL/BE + Open-Meteo Extended)</option>
+                <option value="buienradar">Buienradar 5-min Radar Only (Benelux)</option>
+                <option value="open_meteo">Open-Meteo Only (Worldwide)</option>
+              </select>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="cfg-rain-threshold">Rain Threshold (mm/h)</label>
+                <input type="number" id="cfg-rain-threshold" step="0.05" min="0.05" max="10" value="0.15" required />
+                <span class="field-help">0.15 mm/h = light drizzle threshold</span>
+              </div>
+              <div class="form-group">
+                <label for="cfg-heavy-threshold">Heavy Rain Threshold (mm/h)</label>
+                <input type="number" id="cfg-heavy-threshold" step="0.1" min="0.5" max="25" value="2.0" required />
+                <span class="field-help">2.0+ mm/h = heavy shower</span>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="cfg-timezone">Default Timezone (IANA)</label>
+                <input type="text" id="cfg-timezone" list="iana-timezones-list" value="Europe/Amsterdam" required />
+              </div>
+              <div class="form-group">
+                <label for="cfg-dedup-minutes">Alert Cooldown (minutes)</label>
+                <input type="number" id="cfg-dedup-minutes" min="5" max="240" value="30" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="cfg-pushover-token">Global Pushover App API Token (Optional)</label>
+              <input type="password" id="cfg-pushover-token" placeholder="Paste Pushover Application API Token (or set per user)" autocomplete="off" />
+              <span class="field-help">Shared across users who enable Pushover unless overridden on their user profile.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-inline">
+                <input type="checkbox" id="cfg-bg-monitoring" checked />
+                Enable automatic background radar &amp; break window monitoring
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save Global Settings</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Weather Scenario Simulator & Quick Tester -->
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Interactive Weather Simulator &amp; Channel Tester</h2>
+              <p class="hint">
+                Test how RainBreak advises earlier or later walk/bike windows under different rain patterns, or send a live test notification.
+              </p>
+            </div>
+          </div>
+
+          <div class="simulator-box">
+            <label class="sim-label">Simulate Radar Pattern (Demo / Test Mode)</label>
+            <div class="sim-buttons">
+              <button type="button" class="btn btn-secondary sim-btn" data-scenario="workday_break_rain">
+                &#9748; Rain on 10:00 &amp; 12:30 Breaks (Dry 15m Earlier/Later)
+              </button>
+              <button type="button" class="btn btn-secondary sim-btn" data-scenario="imminent_shower">
+                &#127783; Shower Starting in 15 Min
+              </button>
+              <button type="button" class="btn btn-secondary sim-btn" data-scenario="all_clear">
+                &#9728; All Clear (0.0 mm/h)
+              </button>
+              <button type="button" class="btn btn-secondary sim-btn" data-scenario="heavy_storm">
+                &#9889; Continuous Heavy Rain
+              </button>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <form id="quick-test-form" class="form-grid">
+            <h3>Send Manual Test Notification</h3>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="test-user-id">Target User Profile</label>
+                <select id="test-user-id"></select>
+              </div>
+              <div class="form-group">
+                <label for="test-urgency">Urgency Level</label>
+                <select id="test-urgency">
+                  <option value="urgent">Urgent (High Priority / Bypass Quiet Hours)</option>
+                  <option value="neutral">Neutral (Standard Priority)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="test-custom-msg">Custom Test Message (Optional)</label>
+              <input type="text" id="test-custom-msg" placeholder="e.g. Rain expected at 10:00 — leave 15 min earlier at 09:45!" />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">&#128640; Dispatch Test Alert</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Alert Delivery Audit History -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Notification Delivery Audit Trail</h2>
+            <p class="hint">Recent break advice and imminent rain notifications sent via Home Assistant Notify and Pushover.</p>
+          </div>
+          <div class="panel-actions">
+            <button id="btn-clear-history" class="btn btn-secondary" type="button">Clear History</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="history-table-wrap">
+          <table class="data-table" id="history-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Location / Break</th>
+                <th>Urgency</th>
+                <th>Channel</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr><td colspan="7" class="empty-cell">No alerts logged yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="history-cards" class="history-cards-list" aria-label="Mobile Alert History">
+          <div class="empty-state">No alerts logged yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- IANA Timezone Datalist -->
+    <datalist id="iana-timezones-list">
+      <option value="Europe/Amsterdam">Europe/Amsterdam (Netherlands · CET/CEST)</option>
+      <option value="Europe/Brussels">Europe/Brussels (Belgium)</option>
+      <option value="Europe/Berlin">Europe/Berlin (Germany)</option>
+      <option value="Europe/London">Europe/London (UK)</option>
+      <option value="Europe/Paris">Europe/Paris (France)</option>
+      <option value="Europe/Zurich">Europe/Zurich (Switzerland)</option>
+      <option value="UTC">UTC</option>
+      <option value="America/New_York">America/New_York</option>
+      <option value="America/Los_Angeles">America/Los_Angeles</option>
+    </datalist>
+
+    <!-- Generic Modal Dialog -->
+    <dialog id="app-modal" class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-title">Configure</h3>
+          <button id="modal-close-btn" class="close-btn" type="button" aria-label="Close dialog">&times;</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </dialog>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>ASGARD RainBreak v0.1.0</span>
+      <span>Buienradar 5m + Open-Meteo &middot; Smart Break Optimizer &middot; HA Notify &amp; Pushover</span>
+    </footer>
+  </div>
+
+  <script src="static/app.js?v=0.1.0"></script>
+</body>
+</html>

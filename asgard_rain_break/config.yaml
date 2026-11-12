@@ -1,0 +1,31 @@
+name: ASGARD RainBreak
+slug: asgard_rain_break
+version: "0.1.0"
+description: "Smart rain radar alerts, break & walk window optimizer, multi-location tracking, and Home Assistant / Pushover notifications"
+url: "https://github.com/minermartijn/Asgard_HA_AddOns/tree/main/asgard_rain_break"
+stage: experimental
+arch:
+  - amd64
+startup: application
+boot: auto
+init: false
+ingress: true
+ingress_port: 8097
+panel_icon: mdi:weather-pouring
+panel_title: RainBreak
+panel_admin: false
+hassio_api: true
+hassio_role: default
+homeassistant_api: true
+options:
+  demo_mode: false
+  default_timezone: "Europe/Amsterdam"
+  poll_interval_seconds: 180
+  default_rain_threshold_mm: 0.15
+  pushover_app_token: ""
+schema:
+  demo_mode: bool
+  default_timezone: str
+  poll_interval_seconds: int(30,3600)
+  default_rain_threshold_mm: float(0.05,10.0)
+  pushover_app_token: str?
