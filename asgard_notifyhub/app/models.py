@@ -53,7 +53,21 @@ class DeliveryStatus(str, Enum):
     SUPPRESSED_DUPLICATE = "suppressed_duplicate"
     ROUTE_DISABLED = "route_disabled"
     RECIPIENT_DISABLED = "recipient_disabled"
+    BLOCKED_PRIORITY = "blocked_priority"
+    INVALID_ROUTE = "invalid_route"
     FAILED = "failed"
+
+
+# Statuses that mean NotifyHub intentionally did not call Home Assistant.
+SUPPRESSED_STATUSES = {
+    DeliveryStatus.BLOCKED_QUIET_HOURS,
+    DeliveryStatus.SUPPRESSED_DUPLICATE,
+    DeliveryStatus.BLOCKED_PRIORITY,
+    DeliveryStatus.ROUTE_DISABLED,
+    DeliveryStatus.RECIPIENT_DISABLED,
+}
+# Statuses that represent an error that needs the user's attention.
+ERROR_STATUSES = {DeliveryStatus.FAILED, DeliveryStatus.INVALID_ROUTE}
 
 
 class TargetType(str, Enum):
@@ -70,6 +84,8 @@ class TargetService(BaseModel):
     target_type: str = "service"  # "service" or "entity"
     supported: bool = True
     full_name: Optional[str] = None
+    ha_state: Optional[str] = None  # state reported by Home Assistant for notify entities
+    preferred_alternative: Optional[str] = None  # e.g. notify.mobile_app_<slug> when entity is paired with a mobile_app service
 
     def model_post_init(self, __context: Any) -> None:
         if not self.full_name:
@@ -203,3 +219,51 @@ class AppStatusSummary(BaseModel):
     discovered_services_count: int = 0
     services_discovered: int = 0
     demo_mode: bool = False
+
+
+class DispatchSummary(BaseModel):
+    """Aggregated outcome of a dispatch, derived only from the delivery records.
+
+    ``outcome`` is one of:
+      - ``submitted``: every route was submitted to Home Assistant.
+      - ``partial``: some routes were submitted, others suppressed or failed.
+      - ``suppressed``: nothing was submitted, but nothing failed (policy decisions only).
+      - ``failed``: nothing was submitted and at least one route failed.
+      - ``no_routes``: the target resolved to no routes at all.
+    """
+
+    outcome: str
+    total: int = 0
+    counts: dict[str, int] = Field(default_factory=dict)
+    submitted: int = 0
+    suppressed: int = 0
+    failed: int = 0
+
+
+def summarize_records(records: list[DeliveryRecord]) -> DispatchSummary:
+    counts: dict[str, int] = {}
+    for r in records:
+        key = r.status.value if isinstance(r.status, DeliveryStatus) else str(r.status)
+        counts[key] = counts.get(key, 0) + 1
+    submitted = counts.get(DeliveryStatus.SUBMITTED.value, 0)
+    failed = sum(counts.get(s.value, 0) for s in ERROR_STATUSES)
+    suppressed = sum(counts.get(s.value, 0) for s in SUPPRESSED_STATUSES)
+    total = len(records)
+    if total == 0:
+        outcome = "no_routes"
+    elif submitted == total:
+        outcome = "submitted"
+    elif submitted > 0:
+        outcome = "partial"
+    elif failed > 0:
+        outcome = "failed"
+    else:
+        outcome = "suppressed"
+    return DispatchSummary(
+        outcome=outcome,
+        total=total,
+        counts=counts,
+        submitted=submitted,
+        suppressed=suppressed,
+        failed=failed,
+    )

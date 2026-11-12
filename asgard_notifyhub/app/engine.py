@@ -26,7 +26,7 @@ from app.models import (
     TargetType,
 )
 from app.storage import Storage
-from app.client import HomeAssistantClient
+from app.client import HomeAssistantClient, is_allowed_action, unsupported_action_reason
 
 logger = logging.getLogger("asgard_notifyhub.engine")
 
@@ -64,7 +64,8 @@ def evaluate_quiet_hours(
         tz = ZoneInfo(policy.timezone)
         local_dt = dt_utc.astimezone(tz)
     except Exception:
-        local_dt = dt_utc
+        logger.warning("Policy %s has unknown timezone %r; evaluating in UTC", policy.id, policy.timezone)
+        local_dt = dt_utc.astimezone(timezone.utc)
 
     # Parse HH:MM
     try:
@@ -134,7 +135,10 @@ class RoutingEngine:
         for pol in all_policies:
             if not pol.enabled:
                 continue
-            if pol.target_type == TargetType.RECIPIENT and pol.target_id == recipient.id:
+            if pol.target_type == TargetType.GLOBAL:
+                # Household-wide policy applies to every recipient.
+                applicable.append(pol)
+            elif pol.target_type == TargetType.RECIPIENT and pol.target_id == recipient.id:
                 applicable.append(pol)
             elif pol.target_type == TargetType.GROUP:
                 if group_id and pol.target_id == group_id:
@@ -200,7 +204,23 @@ class RoutingEngine:
                             route_name=route.name,
                             ha_service=f"{route.ha_domain}.{route.ha_service}",
                             status=DeliveryStatus.ROUTE_DISABLED,
-                            reason="Route is disabled",
+                            reason="Route is disabled in NotifyHub",
+                        )
+                    )
+                    blocked += 1
+                    continue
+
+                # Strict action-level allowlist (protects against legacy/stored invalid routes)
+                if not is_allowed_action(route.ha_domain, route.ha_service):
+                    items.append(
+                        PreviewItem(
+                            recipient_id=r.id,
+                            recipient_name=r.name,
+                            route_id=route.id,
+                            route_name=route.name,
+                            ha_service=f"{route.ha_domain}.{route.ha_service}",
+                            status=DeliveryStatus.INVALID_ROUTE,
+                            reason=unsupported_action_reason(route.ha_domain, route.ha_service),
                         )
                     )
                     blocked += 1
@@ -215,7 +235,7 @@ class RoutingEngine:
                             route_id=route.id,
                             route_name=route.name,
                             ha_service=f"{route.ha_domain}.{route.ha_service}",
-                            status=DeliveryStatus.ROUTE_DISABLED,
+                            status=DeliveryStatus.BLOCKED_PRIORITY,
                             reason=f"Message priority '{request.priority.value}' is below route minimum '{route.priority_min.value}'",
                         )
                     )

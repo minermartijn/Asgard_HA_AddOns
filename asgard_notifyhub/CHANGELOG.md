@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.5 - 2026-11-11
+
+### Added
+- **Honest Dispatch Outcome Aggregation (`DispatchSummary`)**: `/api/send` and the Composer now aggregate and distinguish `submitted`, `blocked_quiet_hours`, `suppressed_duplicate`, `blocked_priority`, `route_disabled`, `recipient_disabled`, `invalid_route`, and `failed`. Suppressed or failed notifications are never labeled as "Dispatched", mixed results show a warning with a per-status breakdown, and submission to Home Assistant is clearly distinguished from physical device delivery.
+- **Segmented Target Scope Selector (`Single Recipient | Group | Everyone`)**: Replaced the confusing target dropdown with an accessible segmented control that shows only the active selector, disables and hides inactive selectors (`[hidden] { display: none !important; }`), explains broadcast scope for `Everyone`, and displays a live `"Sending to: …"` confirmation bar.
+- **Full Mobile Responsiveness (320px–1024px+) & Mobile Audit History Cards**: Redesigned CSS layout with responsive grids, wrapping code pills, touch-friendly controls, a responsive 6-tab navigation grid on narrow viewports, and stacked mobile audit history cards (`<= 720px`) alongside the desktop table.
+- **Policy & Route Editing + Orphaned Policy Detection**: Added Edit modals for both Quiet Hours policies and Routes, detects policies referencing deleted recipients/groups (`Orphaned Target`), and validates targets and IANA timezones before saving.
+- **Action-Level Notification Allowlist**: Explicitly excludes non-delivery actions (`persistent_notification.dismiss`, `persistent_notification.dismiss_all`, and standalone `notify.send_message`) from discovery, route creation, and dispatch, while validating stored routes prior to execution.
+- **Galaxy Watch / Companion Entity Diagnostics**: Deterministic single-request dispatch (never retrying failed requests across alternative services, preventing duplicate alerts), clean `notify.send_message` payload construction, and actionable error messages recommending `notify.mobile_app_<device>` when a companion `notify.<device>` entity returns HTTP 500.
+- **`Europe/Amsterdam` Timezone Support & Presets**: Included `tzdata` and IANA timezone validation with `Europe/Amsterdam` (CET/CEST, DST transitions) as the default for new installations and quick-select presets in recipient and policy modals while preserving existing `UTC` policies.
+
 ## 0.1.4 - 2026-11-11
 
 ### Fixed

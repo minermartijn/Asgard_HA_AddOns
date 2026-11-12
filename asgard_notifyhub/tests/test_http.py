@@ -162,7 +162,7 @@ def test_groups_api(client):
 def test_policies_api(client):
     # Test recipient policy
     create_res = client.post("/api/policies", json={
-        "target_id": "household_admin",
+        "target_id": "rec_admin",
         "target_type": "recipient",
         "quiet_start": "22:00",
         "quiet_end": "06:00",

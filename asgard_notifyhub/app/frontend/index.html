@@ -21,7 +21,7 @@
     })();
   </script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
-  <link rel="stylesheet" href="static/app.css?v=0.1.4" />
+  <link rel="stylesheet" href="static/app.css?v=0.1.5" />
 </head>
 <body>
   <div class="layout">
@@ -29,31 +29,31 @@
     <header class="topbar">
       <div class="brand">
         <div class="brand-logo" aria-hidden="true">&#9889;</div>
-        <div>
+        <div class="brand-text">
           <h1>ASGARD NotifyHub</h1>
-          <p class="tagline">Notification routing, quiet hours policy & delivery auditing</p>
+          <p class="tagline">Notification routing, quiet hours policy &amp; delivery auditing</p>
         </div>
       </div>
       <div class="top-actions">
         <span id="ha-status-badge" class="status-badge status-unknown">Checking HA…</span>
-        <button id="btn-refresh-services" class="btn btn-secondary" title="Re-query available Home Assistant notify actions">
-          <span class="btn-icon">&#8635;</span> Sync Services
+        <button id="btn-refresh-services" class="btn btn-secondary" type="button" title="Re-query available Home Assistant notify actions">
+          <span class="btn-icon" aria-hidden="true">&#8635;</span> Sync Services
         </button>
       </div>
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist">
-      <button class="tab-btn active" data-tab="tab-dashboard" role="tab" aria-selected="true">Overview</button>
-      <button class="tab-btn" data-tab="tab-composer" role="tab" aria-selected="false">Composer & Simulator</button>
-      <button class="tab-btn" data-tab="tab-recipients" role="tab" aria-selected="false">Recipients & Routes</button>
-      <button class="tab-btn" data-tab="tab-groups" role="tab" aria-selected="false">Groups</button>
-      <button class="tab-btn" data-tab="tab-policies" role="tab" aria-selected="false">Quiet Hours</button>
-      <button class="tab-btn" data-tab="tab-history" role="tab" aria-selected="false">Audit History</button>
+    <nav class="nav-tabs" role="tablist" aria-label="NotifyHub Sections">
+      <button class="tab-btn active" data-tab="tab-dashboard" role="tab" aria-selected="true" type="button">Overview</button>
+      <button class="tab-btn" data-tab="tab-composer" role="tab" aria-selected="false" type="button">Composer &amp; Simulator</button>
+      <button class="tab-btn" data-tab="tab-recipients" role="tab" aria-selected="false" type="button">Recipients &amp; Routes</button>
+      <button class="tab-btn" data-tab="tab-groups" role="tab" aria-selected="false" type="button">Groups</button>
+      <button class="tab-btn" data-tab="tab-policies" role="tab" aria-selected="false" type="button">Quiet Hours</button>
+      <button class="tab-btn" data-tab="tab-history" role="tab" aria-selected="false" type="button">Audit History</button>
     </nav>
 
-    <!-- Error & Notification Banner -->
-    <div id="status-banner" class="banner banner-error" hidden role="alert"></div>
+    <!-- Error, Warning & Notification Banner -->
+    <div id="status-banner" class="banner banner-error" hidden role="alert" aria-live="polite"></div>
 
     <!-- TAB 1: OVERVIEW / DASHBOARD -->
     <main id="tab-dashboard" class="tab-pane active" role="tabpanel">
@@ -73,7 +73,7 @@
             <h2>Submissions (24h)</h2>
           </div>
           <p class="value" id="stat-submissions">0</p>
-          <p class="hint">Dispatched to Home Assistant</p>
+          <p class="hint">Submitted to Home Assistant</p>
         </article>
 
         <article class="card">
@@ -86,7 +86,7 @@
 
         <article class="card">
           <div class="card-head">
-            <h2>Recipients & Routes</h2>
+            <h2>Recipients &amp; Routes</h2>
           </div>
           <p class="value" id="stat-recipients">0</p>
           <p class="hint" id="stat-routes-hint">0 active routes mapped</p>
@@ -96,7 +96,10 @@
       <!-- Discovered Actions Quickview -->
       <section class="panel">
         <div class="panel-header">
-          <h2>Discovered Home Assistant Notify Actions</h2>
+          <div>
+            <h2>Discovered Home Assistant Notify Actions</h2>
+            <p class="hint">Allowed delivery actions and notification entities discovered from Home Assistant Core.</p>
+          </div>
           <span class="panel-tag" id="tag-discovered-count">0 discovered</span>
         </div>
         <div class="services-list" id="dashboard-services-list">
@@ -115,14 +118,23 @@
             <span class="panel-tag">Interactive</span>
           </div>
           <form id="composer-form" class="form-grid">
-            <div class="form-group">
-              <label for="comp-target-type">Target Category</label>
-              <select id="comp-target-type">
-                <option value="recipient">Single Recipient</option>
-                <option value="group">Recipient Group</option>
-                <option value="all">Broadcast to All Enabled</option>
-              </select>
-            </div>
+            <fieldset class="form-group target-mode-fieldset">
+              <legend class="form-label">Target Scope</legend>
+              <div class="segmented-control" id="comp-target-modes" role="radiogroup" aria-label="Target Scope">
+                <label class="segment-option active" data-target-mode="recipient">
+                  <input type="radio" name="comp-target-mode" id="comp-mode-recipient" value="recipient" checked />
+                  <span>Single Recipient</span>
+                </label>
+                <label class="segment-option" data-target-mode="group">
+                  <input type="radio" name="comp-target-mode" id="comp-mode-group" value="group" />
+                  <span>Group</span>
+                </label>
+                <label class="segment-option" data-target-mode="all">
+                  <input type="radio" name="comp-target-mode" id="comp-mode-all" value="all" />
+                  <span>Everyone</span>
+                </label>
+              </div>
+            </fieldset>
 
             <div class="form-group" id="comp-group-recipient-wrap">
               <label for="comp-recipient-id">Recipient</label>
@@ -133,15 +145,26 @@
 
             <div class="form-group" id="comp-group-select-wrap" hidden>
               <label for="comp-group-id">Recipient Group</label>
-              <select id="comp-group-id">
+              <select id="comp-group-id" disabled>
                 <!-- Populated dynamically -->
               </select>
+            </div>
+
+            <div class="broadcast-scope-box" id="comp-everyone-wrap" hidden>
+              <p class="broadcast-scope-title">Broadcast to Everyone</p>
+              <p class="broadcast-scope-text" id="comp-everyone-desc">
+                Includes all enabled household recipients and evaluates each recipient's active routes, minimum priority, and quiet hours policies.
+              </p>
+            </div>
+
+            <div class="target-confirmation" id="comp-target-summary" aria-live="polite">
+              Sending to: –
             </div>
 
             <div class="form-group">
               <label for="comp-priority">Priority Level</label>
               <select id="comp-priority">
-                <option value="informational">Informational (Silenced by quiet hours & min priority)</option>
+                <option value="informational">Informational (Silenced by quiet hours &amp; min priority)</option>
                 <option value="normal" selected>Normal</option>
                 <option value="urgent">Urgent (Overrides quiet hours if policy permits)</option>
               </select>
@@ -159,10 +182,10 @@
 
             <div class="form-actions">
               <button type="button" id="btn-preview-send" class="btn btn-secondary">
-                <span class="btn-icon">&#128065;</span> Preview Resolution (Dry-run)
+                <span class="btn-icon" aria-hidden="true">&#128065;</span> Preview Resolution (Dry-run)
               </button>
               <button type="submit" id="btn-execute-send" class="btn btn-primary">
-                <span class="btn-icon">&#10148;</span> Dispatch Notification
+                <span class="btn-icon" aria-hidden="true">&#10148;</span> Dispatch Notification
               </button>
             </div>
           </form>
@@ -171,12 +194,13 @@
         <!-- Preview Resolution Simulator Panel -->
         <article class="panel">
           <div class="panel-header">
-            <h2>Resolution Preview</h2>
+            <h2>Resolution &amp; Outcome</h2>
             <span class="panel-tag" id="preview-badge">Dry-Run</span>
           </div>
-          <p class="hint">Simulates route matching, quiet-hour boundaries, and deduplication before sending.</p>
+          <p class="hint">Evaluates route matching, minimum priority, quiet-hour boundaries, and deduplication. Submission confirms Home Assistant accepted the action.</p>
+          <div id="preview-summary-bar" class="preview-summary-bar" hidden></div>
           <div id="preview-results-container" class="preview-results">
-            <p class="hint">Click "Preview Resolution" to inspect routing.</p>
+            <p class="hint">Click "Preview Resolution" to simulate routing or "Dispatch Notification" to send.</p>
           </div>
         </article>
       </div>
@@ -185,8 +209,11 @@
     <!-- TAB 3: RECIPIENTS & ROUTES -->
     <section id="tab-recipients" class="tab-pane" role="tabpanel" hidden>
       <div class="panel-header-controls">
-        <h2>Household Recipients</h2>
-        <button id="btn-add-recipient" class="btn btn-primary">+ New Recipient</button>
+        <div>
+          <h2>Household Recipients &amp; Routes</h2>
+          <p class="hint">Configure household members, per-recipient timezones, and mapped Home Assistant delivery routes.</p>
+        </div>
+        <button id="btn-add-recipient" class="btn btn-primary" type="button">+ New Recipient</button>
       </div>
       <div id="recipients-container" class="recipients-grid">
         <!-- Populated dynamically -->
@@ -196,8 +223,11 @@
     <!-- TAB 4: RECIPIENT GROUPS -->
     <section id="tab-groups" class="tab-pane" role="tabpanel" hidden>
       <div class="panel-header-controls">
-        <h2>Recipient Groups</h2>
-        <button id="btn-add-group" class="btn btn-primary">+ New Group</button>
+        <div>
+          <h2>Recipient Groups</h2>
+          <p class="hint">Group recipients to target multiple household members or apply shared quiet hours policies.</p>
+        </div>
+        <button id="btn-add-group" class="btn btn-primary" type="button">+ New Group</button>
       </div>
       <div id="groups-container" class="groups-grid">
         <!-- Populated dynamically -->
@@ -207,10 +237,12 @@
     <!-- TAB 5: QUIET HOURS POLICIES -->
     <section id="tab-policies" class="tab-pane" role="tabpanel" hidden>
       <div class="panel-header-controls">
-        <h2>Quiet Hours Policies</h2>
-        <button id="btn-add-policy" class="btn btn-primary">+ New Policy</button>
+        <div>
+          <h2>Quiet Hours Policies</h2>
+          <p class="hint">Cross-midnight windows (e.g. 22:00 to 07:00), weekday masks, and IANA timezones (such as Europe/Amsterdam) are evaluated per policy.</p>
+        </div>
+        <button id="btn-add-policy" class="btn btn-primary" type="button">+ New Policy</button>
       </div>
-      <p class="hint">Cross-midnight windows (e.g. 22:00 to 07:00) and per-recipient timezone awareness are fully supported.</p>
       <div id="policies-container" class="policies-grid">
         <!-- Populated dynamically -->
       </div>
@@ -219,13 +251,16 @@
     <!-- TAB 6: AUDIT HISTORY -->
     <section id="tab-history" class="tab-pane" role="tabpanel" hidden>
       <div class="panel-header-controls">
-        <h2>Delivery Audit Trail</h2>
+        <div>
+          <h2>Delivery Audit Trail</h2>
+          <p class="hint">Audit log of submitted, silenced, suppressed, and failed notification route evaluations (message bodies are never stored).</p>
+        </div>
         <div class="history-controls">
-          <button id="btn-purge-history" class="btn btn-secondary">Purge > 30 Days</button>
-          <button id="btn-refresh-history" class="btn btn-secondary">&#8635; Refresh</button>
+          <button id="btn-purge-history" class="btn btn-secondary" type="button">Purge &gt; 30 Days</button>
+          <button id="btn-refresh-history" class="btn btn-secondary" type="button">&#8635; Refresh</button>
         </div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" id="history-table-wrap">
         <table class="data-table" id="history-table">
           <thead>
             <tr>
@@ -242,14 +277,36 @@
           </tbody>
         </table>
       </div>
+      <div id="history-cards" class="history-cards-list" aria-label="Mobile Audit History">
+        <div class="empty-state">Loading audit history&hellip;</div>
+      </div>
     </section>
+
+    <!-- IANA Timezone Datalist -->
+    <datalist id="iana-timezones-list">
+      <option value="Europe/Amsterdam">Europe/Amsterdam (Netherlands · CET/CEST)</option>
+      <option value="UTC">UTC (Coordinated Universal Time)</option>
+      <option value="Europe/Brussels">Europe/Brussels</option>
+      <option value="Europe/Berlin">Europe/Berlin</option>
+      <option value="Europe/London">Europe/London</option>
+      <option value="Europe/Paris">Europe/Paris</option>
+      <option value="Europe/Zurich">Europe/Zurich</option>
+      <option value="Europe/Madrid">Europe/Madrid</option>
+      <option value="Europe/Rome">Europe/Rome</option>
+      <option value="Europe/Stockholm">Europe/Stockholm</option>
+      <option value="America/New_York">America/New_York</option>
+      <option value="America/Chicago">America/Chicago</option>
+      <option value="America/Los_Angeles">America/Los_Angeles</option>
+      <option value="Asia/Tokyo">Asia/Tokyo</option>
+      <option value="Australia/Sydney">Australia/Sydney</option>
+    </datalist>
 
     <!-- Generic Modal Dialog -->
     <dialog id="app-modal" class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
           <h3 id="modal-title">Form</h3>
-          <button id="modal-close-btn" class="close-btn" aria-label="Close dialog">&times;</button>
+          <button id="modal-close-btn" class="close-btn" type="button" aria-label="Close dialog">&times;</button>
         </div>
         <div id="modal-body"></div>
       </div>
@@ -257,11 +314,11 @@
 
     <!-- Diagnostics Footer -->
     <footer class="meta">
-      <span>ASGARD NotifyHub v<span id="footer-version">0.1.4</span></span>
+      <span>ASGARD NotifyHub v<span id="footer-version">0.1.5</span></span>
       <span>Supervisor Ingress API · SQLite Persistence · Strict Notify Allowlist</span>
     </footer>
   </div>
 
-  <script src="static/app.js?v=0.1.4"></script>
+  <script src="static/app.js?v=0.1.5"></script>
 </body>
 </html>
